@@ -11,6 +11,7 @@ export default function Home() {
   const [results, setResults] = useState<FileResult[]>([]);
   const [processing, setProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -48,8 +49,13 @@ export default function Home() {
       }
     }
 
+    // All files processed
     setProcessing(false);
     setFiles([]);
+
+    // Show success tick for 2 seconds
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 2000);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -57,22 +63,16 @@ export default function Home() {
     setIsDragging(true);
   };
 
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
+  const handleDragLeave = () => setIsDragging(false);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-
     const droppedFiles = Array.from(e.dataTransfer.files);
     const imageFiles = droppedFiles.filter((file) =>
       file.type.startsWith("image/")
     );
-
-    if (imageFiles.length > 0) {
-      setFiles(imageFiles);
-    }
+    if (imageFiles.length > 0) setFiles(imageFiles);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,23 +87,19 @@ export default function Home() {
   };
 
   const triggerFileInput = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    fileInputRef.current?.click();
   };
 
   return (
-    <main className="min-h-screen bg-gray-900 text-cyan-300 p-6 font-mono">
-      {/* Animated Background */}
+    <main className="min-h-screen bg-gray-900 text-cyan-300 p-6 font-mono relative">
+      {/* Backgrounds */}
       <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 opacity-90 z-0"></div>
       <div className="fixed inset-0 bg-grid-pattern opacity-10 z-0"></div>
-
-      {/* Animated Glow Effects */}
       <div className="fixed top-0 left-1/4 w-1/2 h-1 blur-md bg-cyan-500 opacity-30 animate-pulse z-0"></div>
       <div className="fixed bottom-0 left-1/3 w-1/3 h-1 blur-md bg-purple-500 opacity-30 animate-pulse z-0"></div>
 
       <div className="relative z-10 flex flex-col items-center justify-center">
-        {/* Title with Cyberpunk Style */}
+        {/* Title */}
         <h1 className="text-4xl md:text-5xl font-bold mb-8 mt-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 tracking-tight">
           <span className="text-cyan-300">[</span>
           OCR IMAGE PROCESSOR
@@ -136,24 +132,7 @@ export default function Home() {
                 ref={fileInputRef}
                 className="hidden"
               />
-
               <div className="text-center p-4">
-                <div className="mb-3">
-                  <svg
-                    className="w-12 h-12 mx-auto text-cyan-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    ></path>
-                  </svg>
-                </div>
                 <p className="text-cyan-300 font-medium">
                   {files.length > 0
                     ? `${files.length} file(s) selected`
@@ -163,72 +142,32 @@ export default function Home() {
                   or{" "}
                   <span className="text-cyan-400 underline">browse files</span>
                 </p>
-                <p className="text-cyan-700 text-xs mt-2">
-                  Supports JPG, PNG, GIF, BMP
-                </p>
               </div>
             </div>
 
             {/* File List */}
             {files.length > 0 && (
-              <div className="w-full">
-                <div className="text-cyan-400 mb-2 flex justify-between items-center">
-                  <span>SELECTED FILES:</span>
-                  <span className="text-cyan-600 text-sm">
-                    {files.length} file(s)
-                  </span>
-                </div>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {files.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between bg-gray-700 bg-opacity-50 rounded-md px-3 py-2"
+              <div className="w-full space-y-2 max-h-40 overflow-y-auto mt-4">
+                {files.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between bg-gray-700 bg-opacity-50 rounded-md px-3 py-2"
+                  >
+                    <span className="text-cyan-300 text-sm truncate max-w-xs">
+                      {file.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile(index);
+                      }}
+                      className="text-cyan-700 hover:text-cyan-500 transition-colors"
                     >
-                      <div className="flex items-center">
-                        <svg
-                          className="w-5 h-5 mr-2 text-cyan-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          ></path>
-                        </svg>
-                        <span className="text-cyan-300 text-sm truncate max-w-xs">
-                          {file.name}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeFile(index);
-                        }}
-                        className="text-cyan-700 hover:text-cyan-500 transition-colors"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M6 18L18 6M6 6l12 12"
-                          ></path>
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -242,49 +181,7 @@ export default function Home() {
                   : "bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/40"
               }`}
             >
-              {processing ? (
-                <>
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  PROCESSING...
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-5 h-5 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    ></path>
-                  </svg>
-                  UPLOAD & EXTRACT TEXT
-                </>
-              )}
+              {processing ? "PROCESSING..." : "UPLOAD & EXTRACT TEXT"}
             </button>
           </form>
         </div>
@@ -293,11 +190,8 @@ export default function Home() {
         {results.length > 0 && (
           <section className="w-full max-w-4xl bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-xl border border-purple-500 border-opacity-30 shadow-2xl shadow-purple-500/20 p-6">
             <h2 className="text-2xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">
-              <span className="text-cyan-300">[</span>
               OCR RESULTS
-              <span className="text-cyan-300">]</span>
             </h2>
-
             <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
               {results.map((r, idx) => (
                 <div
@@ -307,41 +201,10 @@ export default function Home() {
                   } shadow-md`}
                 >
                   <h3
-                    className={`font-semibold text-lg mb-3 flex items-center ${
+                    className={`font-semibold text-lg mb-3 ${
                       r.status === "error" ? "text-red-400" : "text-cyan-300"
                     }`}
                   >
-                    {r.status === "error" ? (
-                      <svg
-                        className="w-5 h-5 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        ></path>
-                      </svg>
-                    ) : (
-                      <svg
-                        className="w-5 h-5 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        ></path>
-                      </svg>
-                    )}
                     {r.name}
                   </h3>
                   <div
@@ -362,17 +225,73 @@ export default function Home() {
         )}
       </div>
 
-      {/* Cyberpunk Style CSS */}
-      <style jsx global>{`
-        @keyframes scan {
-          0% {
-            transform: translateY(-100%);
-          }
-          100% {
-            transform: translateY(100%);
-          }
-        }
+      {/* Blue Tick Popup */}
+      {showSuccess && (
+        <div className="fixed inset-0 z-50 flex items-start justify-end pointer-events-none">
+          <div className="relative w-40 h-40">
+            {/* Outer Glow Ring */}
+            <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping-slow"></div>
 
+            {/* Pulsing Hexagon */}
+            <svg
+              className="absolute inset-0 w-full h-full text-cyan-400 animate-pulse"
+              viewBox="0 0 100 100"
+            >
+              <polygon
+                points="50,5 85,25 85,75 50,95 15,75 15,25"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeDasharray="5,3"
+              />
+            </svg>
+
+            {/* Inner Hexagon */}
+            <svg
+              className="absolute inset-0 m-auto w-32 h-32 text-cyan-500"
+              viewBox="0 0 100 100"
+            >
+              <polygon
+                points="50,15 75,30 75,70 50,85 25,70 25,30"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+            </svg>
+
+            {/* Blue Tick in the Center */}
+            <svg
+              className="absolute inset-0 m-auto w-20 h-20 text-blue-500"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M5 13l4 4L19 7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+
+            {/* Glowing Particles */}
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-2 h-2 bg-cyan-400 rounded-full animate-float"
+                style={{
+                  top: `${50 + 30 * Math.sin((i * Math.PI) / 3)}%`,
+                  left: `${50 + 30 * Math.cos((i * Math.PI) / 3)}%`,
+                  animationDelay: `${i * 0.2}s`,
+                }}
+              ></div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Global CSS */}
+      <style jsx global>{`
         .bg-grid-pattern {
           background-image: linear-gradient(
               rgba(6, 182, 212, 0.1) 1px,
@@ -381,36 +300,36 @@ export default function Home() {
             linear-gradient(90deg, rgba(6, 182, 212, 0.1) 1px, transparent 1px);
           background-size: 20px 20px;
         }
-
-        .cyberpunk-glow {
-          box-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #0ff, 0 0 20px #0ff;
+        @keyframes fade-in-out {
+          0%,
+          100% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.1);
+          }
         }
-
-        .cyberpunk-border {
-          border: 1px solid #0ff;
-          box-shadow: inset 0 0 10px #0ff, 0 0 10px #0ff;
+        .animate-fade-in-out {
+          animation: fade-in-out 2s ease-in-out forwards;
         }
-
-        .scan-effect {
-          position: relative;
-          overflow: hidden;
+        @keyframes ping-slow {
+          0% {
+            transform: scale(0.8);
+            opacity: 0.8;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 0.5;
+          }
+          100% {
+            transform: scale(1.4);
+            opacity: 0;
+          }
         }
-
-        .scan-effect::after {
-          content: "";
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(
-            to bottom,
-            transparent,
-            rgba(0, 255, 255, 0.2),
-            transparent
-          );
-          animation: scan 3s linear infinite;
-          pointer-events: none;
+        .animate-ping-slow {
+          animation: ping-slow 2s ease-out forwards;
         }
       `}</style>
     </main>
