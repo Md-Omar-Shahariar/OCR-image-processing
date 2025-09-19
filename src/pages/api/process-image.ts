@@ -12,7 +12,7 @@ export const config = {
   },
 };
 
-const API_KEY = "K87899389288957";
+const API_KEY = process.env.OCR_SPACE_API_KEY || "";
 const URL = "https://api.ocr.space/parse/image";
 const MAX_SIZE = 2000;
 const CONTRAST = 2;
