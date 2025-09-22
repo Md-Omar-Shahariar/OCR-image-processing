@@ -44,6 +44,28 @@ async function processOCR(
   return result;
 }
 
+function cleanSearchQueries(text: string): string {
+  return (
+    text
+      // Split into lines
+      .split("\n")
+      // Process each line individually
+      .map((line) =>
+        line
+          // Remove Q characters and any following punctuation/spaces
+          .replace(/Q[ ,、]?\s*/g, "")
+          // Normalize multiple spaces to single spaces
+          .replace(/\s+/g, " ")
+          // Trim leading/trailing spaces
+          .trim()
+      )
+      // Remove empty lines
+      .filter((line) => line.length > 0)
+      // Join back with newlines
+      .join("\n")
+  );
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -89,7 +111,7 @@ export default async function handler(
 
     // Try Engine 2 first
     let result = await processOCR(imageBuffer, language[0], "2");
-    console.log("Engine 2 response:", result); // <-- Log Engine 2 response
+    console.log("Engine 2 response:", result);
 
     // If Engine 2 fails or server busy
     if (
@@ -101,7 +123,7 @@ export default async function handler(
       );
       await new Promise((r) => setTimeout(r, 1000));
       result = await processOCR(imageBuffer, language[0], "1");
-      console.log("Engine 1 response:", result); // <-- Log Engine 1 response
+      console.log("Engine 1 response:", result);
     }
 
     if (result?.IsErroredOnProcessing) {
@@ -111,8 +133,13 @@ export default async function handler(
       });
     }
 
-    const text: string = result?.ParsedResults?.[0]?.ParsedText || "";
-    return res.status(200).json({ status: "success", text });
+    const rawText: string = result?.ParsedResults?.[0]?.ParsedText || "";
+    const cleanedText = cleanSearchQueries(rawText);
+
+    return res.status(200).json({
+      status: "success",
+      text: cleanedText,
+    });
   } catch (error: unknown) {
     console.error("OCR API Error:", error);
     const message: string =
