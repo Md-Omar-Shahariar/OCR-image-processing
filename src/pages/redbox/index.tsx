@@ -22,6 +22,8 @@ interface OCRResult {
 declare global {
   interface Window {
     cv: any;
+    isOpenCVLoading?: boolean;
+    isOpenCVLoaded?: boolean;
   }
 }
 
@@ -46,24 +48,66 @@ export default function RedBoxOCR() {
     return () => clearInterval(interval);
   }, []);
 
-  // Load OpenCV dynamically
+  // Load OpenCV dynamically - FIXED VERSION
   useEffect(() => {
     const loadOpenCV = async (): Promise<void> => {
-      if (typeof window !== "undefined" && window.cv) {
+      // Check if OpenCV is already loaded
+      if (typeof window !== "undefined" && window.cv && window.isOpenCVLoaded) {
         setStatus("OPENCV_LOADED");
+        return;
+      }
+
+      // Check if OpenCV is currently loading
+      if (window.isOpenCVLoading) {
+        setStatus("OPENCV_LOADING_IN_PROGRESS");
+        // Wait for loading to complete
+        await new Promise<void>((resolve) => {
+          const checkLoaded = () => {
+            if (window.isOpenCVLoaded) {
+              resolve();
+            } else {
+              setTimeout(checkLoaded, 100);
+            }
+          };
+          checkLoaded();
+        });
         return;
       }
 
       try {
         setStatus("LOADING_OPENCV...");
+        window.isOpenCVLoading = true;
 
         await new Promise<void>((resolve, reject) => {
+          // Check if script is already added
+          const existingScript = document.querySelector(
+            'script[src*="opencv.js"]'
+          );
+          if (existingScript) {
+            // Script already exists, wait for it to load
+            const checkCV = () => {
+              if (window.cv && window.cv.Mat) {
+                window.isOpenCVLoaded = true;
+                window.isOpenCVLoading = false;
+                setStatus("OPENCV_LOADED_SUCCESS");
+                resolve();
+              } else {
+                setTimeout(checkCV, 100);
+              }
+            };
+            checkCV();
+            return;
+          }
+
+          // Create and add new script
           const script = document.createElement("script");
           script.src = "https://docs.opencv.org/4.8.0/opencv.js";
           script.async = true;
           script.onload = () => {
             const checkCV = () => {
               if (window.cv && window.cv.Mat) {
+                window.isOpenCVLoaded = true;
+                window.isOpenCVLoading = false;
                 setStatus("OPENCV_LOADED_SUCCESS");
                 resolve();
               } else {
@@ -72,10 +116,14 @@ export default function RedBoxOCR() {
             };
             checkCV();
           };
-          script.onerror = () => reject(new Error("Failed to load OpenCV"));
+          script.onerror = () => {
+            window.isOpenCVLoading = false;
+            reject(new Error("Failed to load OpenCV"));
+          };
           document.head.appendChild(script);
         });
       } catch (error) {
+        window.isOpenCVLoading = false;
         setStatus("OPENCV_LOAD_FAILED - USING_CANVAS_MODE");
         console.error("OpenCV loading failed:", error);
       }
@@ -215,7 +263,22 @@ export default function RedBoxOCR() {
         let redBoxes: Box[] = [];
         const texts: OCRResult[] = [];
 
-        if (window.cv && window.cv.Mat) {
+        // Wait for OpenCV to be fully loaded if it's still loading
+        if (window.isOpenCVLoading && !window.isOpenCVLoaded) {
+          setStatus("WAITING_FOR_OPENCV...");
+          await new Promise<void>((resolve) => {
+            const checkLoaded = () => {
+              if (window.isOpenCVLoaded) {
+                resolve();
+              } else {
+                setTimeout(checkLoaded, 100);
+              }
+            };
+            checkLoaded();
+          });
+        }
+
+        if (window.cv && window.cv.Mat && window.isOpenCVLoaded) {
           setStatus("OPENCV_DETECTION_ACTIVE");
 
           // OpenCV detection
@@ -471,10 +534,6 @@ export default function RedBoxOCR() {
                 CYBER_OPTICAL_CHARACTER_RECOGNITION
               </span>
             </div>
-
-            <div className="text-cyan-600 text-xs font-mono tracking-wider">
-              SYSTEM_v2.3.7
-            </div>
           </div>
 
           {/* Upload Section */}
@@ -636,11 +695,11 @@ export default function RedBoxOCR() {
                               </pre>
                             </div>
 
-                            {/* Position Data
+                            {/* Position Data */}
                             <div className="text-cyan-600 text-xs font-mono tracking-wider">
                               COORDINATES: X{result.box.x} Y{result.box.y} |
                               DIM: W{result.box.width} H{result.box.height}
-                            </div> */}
+                            </div>
                           </div>
                         </div>
                       ))}
