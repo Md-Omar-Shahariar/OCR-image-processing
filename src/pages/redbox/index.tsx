@@ -1,6 +1,6 @@
 // components/RedBoxOCR.tsx
-"use client";
 
+import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 import { createWorker } from "tesseract.js";
 
@@ -26,21 +26,36 @@ declare global {
 }
 
 export default function RedBoxOCR() {
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [results, setResults] = useState<OCRResult[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [status, setStatus] = useState<string>("Ready to upload image");
+  const [status, setStatus] = useState<string>("SYSTEM_READY");
+  const [originalImage, setOriginalImage] = useState<string | null>(null);
+  const [scanLinePosition, setScanLinePosition] = useState(0);
+
+  const goHome = () => {
+    router.push("/");
+  };
+
+  // Animated scan line effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setScanLinePosition((prev) => (prev + 10) % 100);
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   // Load OpenCV dynamically
   useEffect(() => {
     const loadOpenCV = async (): Promise<void> => {
       if (typeof window !== "undefined" && window.cv) {
-        setStatus("OpenCV loaded successfully");
+        setStatus("OPENCV_LOADED");
         return;
       }
 
       try {
-        setStatus("Loading OpenCV...");
+        setStatus("LOADING_OPENCV...");
 
         await new Promise<void>((resolve, reject) => {
           const script = document.createElement("script");
@@ -49,7 +64,7 @@ export default function RedBoxOCR() {
           script.onload = () => {
             const checkCV = () => {
               if (window.cv && window.cv.Mat) {
-                setStatus("OpenCV loaded successfully");
+                setStatus("OPENCV_LOADED_SUCCESS");
                 resolve();
               } else {
                 setTimeout(checkCV, 100);
@@ -61,9 +76,7 @@ export default function RedBoxOCR() {
           document.head.appendChild(script);
         });
       } catch (error) {
-        setStatus(
-          "Error loading OpenCV. Using canvas-based detection instead."
-        );
+        setStatus("OPENCV_LOAD_FAILED - USING_CANVAS_MODE");
         console.error("OpenCV loading failed:", error);
       }
     };
@@ -162,7 +175,7 @@ export default function RedBoxOCR() {
     s: number,
     v: number
   ): [number, number, number, number] => {
-    return [h, s, v, 0]; // Add alpha channel as 0
+    return [h, s, v, 0];
   };
 
   const handleImage = async (
@@ -172,8 +185,9 @@ export default function RedBoxOCR() {
     if (!file) return;
 
     setIsProcessing(true);
-    setStatus("Processing image...");
+    setStatus("PROCESSING_IMAGE...");
     setResults([]);
+    setOriginalImage(URL.createObjectURL(file));
 
     const img = new Image();
     img.src = URL.createObjectURL(file);
@@ -182,14 +196,14 @@ export default function RedBoxOCR() {
       const canvas = canvasRef.current;
       if (!canvas) {
         setIsProcessing(false);
-        setStatus("Canvas not available");
+        setStatus("CANVAS_ERROR");
         return;
       }
 
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         setIsProcessing(false);
-        setStatus("Canvas context not available");
+        setStatus("CONTEXT_ERROR");
         return;
       }
 
@@ -202,17 +216,15 @@ export default function RedBoxOCR() {
         const texts: OCRResult[] = [];
 
         if (window.cv && window.cv.Mat) {
-          setStatus("Using OpenCV for detection...");
+          setStatus("OPENCV_DETECTION_ACTIVE");
 
-          // OpenCV detection - FIXED: Use proper Scalar values
+          // OpenCV detection
           const src = window.cv.imread(canvas);
           const hsv = new window.cv.Mat();
 
-          // Convert to HSV properly
           window.cv.cvtColor(src, hsv, window.cv.COLOR_RGBA2RGB);
           window.cv.cvtColor(hsv, hsv, window.cv.COLOR_RGB2HSV);
 
-          // FIXED: Create HSV range with proper 4-element Scalars
           const lowRed1 = new window.cv.Mat(
             hsv.rows,
             hsv.cols,
@@ -246,7 +258,6 @@ export default function RedBoxOCR() {
           window.cv.inRange(hsv, lowRed2, highRed2, mask2);
           window.cv.bitwise_or(mask1, mask2, redMask);
 
-          // Optional: Apply morphological operations to clean up the mask
           const kernel = window.cv.getStructuringElement(
             window.cv.MORPH_RECT,
             new window.cv.Size(5, 5)
@@ -277,7 +288,6 @@ export default function RedBoxOCR() {
           for (let i = 0; i < contours.size(); i++) {
             const contour = contours.get(i);
             const rect = window.cv.boundingRect(contour);
-            // Filter small detections
             if (rect.width > 50 && rect.height > 50) {
               redBoxes.push({
                 x: rect.x,
@@ -289,8 +299,8 @@ export default function RedBoxOCR() {
             contour.delete();
           }
 
-          // Cleanup OpenCV objects
-          const objectsToDelete = [
+          // Cleanup
+          [
             src,
             hsv,
             lowRed1,
@@ -303,42 +313,26 @@ export default function RedBoxOCR() {
             contours,
             hierarchy,
             kernel,
-          ];
-
-          objectsToDelete.forEach((mat) => {
-            if (mat && !mat.isDeleted) {
-              try {
-                mat.delete();
-              } catch (error) {
-                console.warn("Error deleting OpenCV object:", error);
-              }
-            }
-          });
+          ].forEach((mat) => mat && !mat.isDeleted && mat.delete());
         } else {
-          setStatus("Using canvas-based detection...");
-          // Fallback to canvas-based detection
+          setStatus("CANVAS_DETECTION_ACTIVE");
           redBoxes = detectRedBoxesWithCanvas(ctx, img.width, img.height);
         }
 
-        setStatus(`Found ${redBoxes.length} red boxes. Performing OCR...`);
+        setStatus(`DETECTED_${redBoxes.length}_RED_BOXES - RUNNING_OCR...`);
 
-        // Perform OCR on each detected box
+        // Perform OCR
         const worker = await createWorker("jpn");
 
         for (let i = 0; i < redBoxes.length; i++) {
           const rect = redBoxes[i];
-
-          // Create a canvas for the ROI
           const roiCanvas = document.createElement("canvas");
           roiCanvas.width = Math.max(rect.width, 1);
           roiCanvas.height = Math.max(rect.height, 1);
           const roiCtx = roiCanvas.getContext("2d");
 
-          if (!roiCtx || rect.width <= 0 || rect.height <= 0) {
-            continue;
-          }
+          if (!roiCtx || rect.width <= 0 || rect.height <= 0) continue;
 
-          // Draw the region to the ROI canvas
           roiCtx.drawImage(
             canvas,
             rect.x,
@@ -352,9 +346,7 @@ export default function RedBoxOCR() {
           );
 
           try {
-            // Perform OCR
             const { data } = await worker.recognize(roiCanvas);
-
             if (data.text.trim()) {
               texts.push({
                 box: rect,
@@ -363,13 +355,19 @@ export default function RedBoxOCR() {
               });
             }
 
-            // Draw bounding box on original canvas
-            ctx.strokeStyle = "#00ff00";
-            ctx.lineWidth = 3;
+            // Neon-style bounding boxes
+            ctx.strokeStyle = "#ff00ff";
+            ctx.lineWidth = 4;
+            ctx.shadowColor = "#ff00ff";
+            ctx.shadowBlur = 15;
             ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
-            ctx.fillStyle = "#00ff00";
-            ctx.font = "16px Arial";
-            ctx.fillText(`Box ${i + 1}`, rect.x, rect.y - 5);
+
+            ctx.fillStyle = "#ff00ff";
+            ctx.font = "bold 18px 'Courier New', monospace";
+            ctx.shadowColor = "#ff00ff";
+            ctx.shadowBlur = 10;
+            ctx.fillText(`BOX_${i + 1}`, rect.x, rect.y - 10);
+            ctx.shadowBlur = 0;
           } catch (error) {
             console.error(`OCR error for box ${i + 1}:`, error);
           }
@@ -377,13 +375,11 @@ export default function RedBoxOCR() {
 
         await worker.terminate();
         setResults(texts);
-        setStatus(`Processing complete. Found ${texts.length} text elements.`);
+        setStatus(`PROCESSING_COMPLETE - FOUND_${texts.length}_TEXT_ELEMENTS`);
       } catch (error) {
         console.error("Error processing image:", error);
         setStatus(
-          `Error processing image: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          `ERROR: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`
         );
       } finally {
         setIsProcessing(false);
@@ -393,90 +389,441 @@ export default function RedBoxOCR() {
 
     img.onerror = () => {
       setIsProcessing(false);
-      setStatus("Error loading image");
+      setStatus("IMAGE_LOAD_ERROR");
     };
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-      <h1>Red Box Text Extractor</h1>
+    <main className="min-h-screen bg-black text-cyan-300 p-6 font-mono relative overflow-hidden">
+      {/* Cyberpunk Background Elements */}
+      <div className="fixed inset-0 bg-gradient-to-br from-black via-purple-900 to-blue-900 z-0"></div>
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_50%,rgba(120,119,198,0.3),rgba(255,255,255,0))] z-0"></div>
 
-      <div style={{ marginBottom: "20px" }}>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImage}
-          disabled={isProcessing}
-          style={{ marginBottom: "10px" }}
-        />
+      {/* Animated Grid */}
+      <div className="fixed inset-0 bg-grid-pattern opacity-20 z-0"></div>
 
-        <div
-          style={{
-            padding: "10px",
-            backgroundColor: "#f5f5f5",
-            borderRadius: "5px",
-            marginBottom: "10px",
-            minHeight: "20px",
-          }}
-        >
-          <strong>Status:</strong> {status}
+      {/* Moving Scan Lines */}
+      <div
+        className="fixed inset-0 z-0 opacity-10"
+        style={{
+          background: `linear-gradient(to bottom, transparent 0%, rgba(0, 255, 255, 0.8) ${scanLinePosition}%, transparent 100%)`,
+          backgroundSize: "100% 200px",
+        }}
+      ></div>
+
+      {/* Neon Orbs */}
+      <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse-slow z-0"></div>
+      <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse-slow delay-1000 z-0"></div>
+      <div className="fixed top-1/2 left-1/2 w-64 h-64 bg-purple-500/15 rounded-full blur-2xl animate-pulse-slow delay-500 z-0"></div>
+
+      {/* Binary Rain Effect */}
+      <div className="fixed inset-0 bg-binary-rain opacity-30 z-0"></div>
+
+      {/* Home Button */}
+      <button
+        onClick={goHome}
+        className="fixed top-6 left-6 z-50 bg-black/80 backdrop-blur-md text-cyan-300 px-6 py-3 rounded-lg border border-cyan-500/50 hover:border-cyan-300 transition-all duration-300 neon-glow hover:neon-glow-intense group"
+      >
+        <div className="flex items-center space-x-3">
+          <div className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse"></div>
+          <span className="font-mono text-sm tracking-wider">
+            RETURN_TO_MAINFRAME
+          </span>
+          <div className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse delay-1000"></div>
+        </div>
+      </button>
+
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen">
+        {/* Cyberpunk Title */}
+        <div className="text-center mb-12 relative">
+          {/* Title Glow Effect */}
+          <div className="absolute -inset-8 bg-cyan-500/20 blur-2xl rounded-full animate-pulse"></div>
+
+          {/* Main Title */}
+          <h1 className="text-5xl md:text-6xl font-bold relative bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-pink-400 to-purple-400 tracking-widest neon-text">
+            <span className="text-cyan-300 drop-shadow-neon">[</span>
+            RED_BOX_SCANNER_v2.0
+            <span className="text-cyan-300 drop-shadow-neon">]</span>
+          </h1>
+
+          {/* Subtitle */}
+          <div className="h-1 w-80 mx-auto mt-6 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-lg shadow-cyan-400/50"></div>
+          <p className="text-cyan-600 mt-3 text-sm font-mono tracking-wider glow-text">
+            NEON_VISION_PATTERN_RECOGNITION
+          </p>
         </div>
 
-        {isProcessing && (
-          <div style={{ color: "#007acc" }}>
-            ⏳ Processing... This may take a moment for large images.
+        {/* Main Cyberpunk Terminal */}
+        <div className="w-full max-w-7xl bg-black/60 backdrop-blur-md rounded-xl border border-cyan-500/40 shadow-2xl shadow-cyan-500/30 p-8 mb-8 relative overflow-hidden neon-terminal">
+          {/* Terminal Header */}
+          <div className="flex items-center mb-8 pb-4 border-b border-cyan-500/40 relative">
+            {/* Animated Header Glow */}
+            <div className="absolute -inset-4 bg-cyan-500/10 blur-xl rounded-lg"></div>
+
+            <div className="flex space-x-3 relative z-10">
+              <div className="w-3 h-3 bg-red-400 rounded-full neon-dot"></div>
+              <div className="w-3 h-3 bg-yellow-400 rounded-full neon-dot delay-300"></div>
+              <div className="w-3 h-3 bg-green-400 rounded-full neon-dot delay-700"></div>
+            </div>
+
+            <div className="flex-1 text-center">
+              <span className="text-cyan-300 font-mono text-lg tracking-wider glow-text">
+                CYBER_OPTICAL_CHARACTER_RECOGNITION
+              </span>
+            </div>
+
+            <div className="text-cyan-600 text-xs font-mono tracking-wider">
+              SYSTEM_v2.3.7
+            </div>
           </div>
-        )}
+
+          {/* Upload Section */}
+          <div className="mb-8">
+            <label className="block text-cyan-300 font-mono text-sm mb-4 tracking-wider glow-text">
+              UPLOAD_TARGET_IMAGE:
+            </label>
+
+            <label className="relative block cursor-pointer group">
+              {/* Upload Card Glow */}
+              <div className="absolute -inset-2 bg-cyan-500/20 blur-lg rounded-2xl group-hover:bg-cyan-400/30 transition-all duration-500"></div>
+
+              <div className="relative border-2 border-dashed border-cyan-700 rounded-xl p-8 text-center group-hover:border-cyan-400 transition-all duration-300 neon-upload">
+                <div className="relative z-10">
+                  {/* Upload Icon */}
+                  <div className="w-16 h-16 mx-auto mb-4 relative">
+                    <div className="absolute inset-0 bg-cyan-400/20 rounded-full animate-ping"></div>
+                    <div className="absolute inset-2 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-full flex items-center justify-center neon-icon">
+                      <svg
+                        className="w-8 h-8 text-black"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div className="text-cyan-300 font-mono text-xl mb-2 tracking-wider">
+                    {isProcessing ? "PROCESSING..." : "DROP_ZONE_ACTIVE"}
+                  </div>
+                  <div className="text-cyan-600 text-sm font-mono tracking-wider">
+                    SUPPORTED_FORMATS: JPG/PNG/BMP
+                  </div>
+                </div>
+              </div>
+
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImage}
+                disabled={isProcessing}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {/* Status Display */}
+          <div className="mb-8">
+            <div className="bg-black/50 rounded-xl p-6 border border-cyan-500/30 relative neon-status">
+              <div className="flex items-center space-x-4">
+                <div
+                  className={`w-3 h-3 rounded-full neon-status-dot ${
+                    isProcessing
+                      ? "bg-yellow-400 animate-pulse"
+                      : "bg-green-400"
+                  }`}
+                ></div>
+                <span className="text-cyan-300 font-mono text-base tracking-wider">
+                  SYSTEM_STATUS: <span className="text-cyan-100">{status}</span>
+                </span>
+              </div>
+
+              {isProcessing && (
+                <div className="mt-4">
+                  <div className="w-full bg-cyan-900/30 rounded-full h-3 overflow-hidden">
+                    <div className="bg-gradient-to-r from-cyan-400 via-pink-400 to-purple-400 h-3 rounded-full animate-progress"></div>
+                  </div>
+                  <div className="text-cyan-500 text-xs mt-2 font-mono tracking-wider text-center">
+                    ANALYZING_IMAGE_DATA - PLEASE_STANDBY...
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Results Section - Side by Side */}
+          {(originalImage || results.length > 0) && (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mt-8">
+              {/* Image Panel */}
+              <div className="space-y-4">
+                <div className="flex items-center pb-3 border-b border-cyan-500/40">
+                  <div className="w-2 h-2 bg-cyan-400 rounded-full mr-3 animate-pulse neon-dot"></div>
+                  <h3 className="text-cyan-300 font-mono text-xl tracking-wider glow-text">
+                    VISUAL_ANALYSIS
+                  </h3>
+                </div>
+
+                <div className="relative bg-black/80 rounded-xl border border-cyan-500/30 p-3 neon-panel">
+                  {originalImage && (
+                    <div className="relative overflow-hidden rounded-lg">
+                      <img
+                        src={originalImage}
+                        alt="Original"
+                        className="w-full h-auto rounded-lg"
+                      />
+                      <canvas
+                        ref={canvasRef}
+                        className="absolute inset-0 w-full h-full rounded-lg"
+                        style={{
+                          display: results.length > 0 ? "block" : "none",
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Text Results Panel */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-pink-500/40">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-pink-400 rounded-full mr-3 animate-pulse neon-dot"></div>
+                    <h3 className="text-pink-300 font-mono text-xl tracking-wider glow-text">
+                      TEXT_EXTRACTION
+                    </h3>
+                  </div>
+                  {results.length > 0 && (
+                    <span className="text-pink-500 text-sm font-mono tracking-wider neon-badge">
+                      {results.length}_ELEMENTS
+                    </span>
+                  )}
+                </div>
+
+                <div className="h-auto overflow-y-auto terminal-scroll bg-black/60 rounded-xl border border-pink-500/30 p-4 neon-panel">
+                  {results.length > 0 ? (
+                    <div className="space-y-4">
+                      {results.map((result, index) => (
+                        <div
+                          key={index}
+                          className="bg-gradient-to-r from-pink-500/10 to-cyan-500/5 rounded-xl p-1 border border-pink-500/20 neon-result"
+                        >
+                          <div className="bg-black/80 rounded-xl p-4">
+                            {/* Result Header */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-2 h-2 bg-gradient-to-r from-cyan-400 to-pink-400 rounded-full animate-pulse"></div>
+                                <span className="text-cyan-300 font-mono font-bold tracking-wider text-lg">
+                                  BOX_{index + 1}
+                                </span>
+                              </div>
+                              {result.confidence && (
+                                <span className="text-pink-400 text-xs font-mono tracking-wider neon-confidence">
+                                  CONF: {Math.round(result.confidence)}%
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Extracted Text */}
+                            <div className="bg-black/50 rounded-lg p-4 border border-cyan-500/10 mb-2">
+                              <pre className="text-cyan-200 font-mono text-base tracking-wide whitespace-pre-wrap neon-text-content">
+                                {result.text}
+                              </pre>
+                            </div>
+
+                            {/* Position Data
+                            <div className="text-cyan-600 text-xs font-mono tracking-wider">
+                              COORDINATES: X{result.box.x} Y{result.box.y} |
+                              DIM: W{result.box.width} H{result.box.height}
+                            </div> */}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-cyan-600 font-mono tracking-wider text-lg">
+                      {isProcessing
+                        ? "SCANNING_FOR_TEXT..."
+                        : "AWAITING_IMAGE_ANALYSIS"}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!originalImage && results.length === 0 && (
+            <div className="text-center py-16 text-cyan-600 font-mono tracking-wider text-lg neon-empty">
+              UPLOAD_IMAGE_TO_INITIATE_NEON_SCAN
+            </div>
+          )}
+        </div>
+
+        {/* System Footer */}
       </div>
 
-      <canvas
-        ref={canvasRef}
-        style={{
-          border: "1px solid #ddd",
-          marginTop: 10,
-          maxWidth: "100%",
-          display: results.length > 0 ? "block" : "none",
-        }}
-      />
+      {/* Global Cyberpunk Styles */}
+      <style jsx global>{`
+        .bg-grid-pattern {
+          background-image: linear-gradient(
+              rgba(0, 255, 255, 0.1) 1px,
+              transparent 1px
+            ),
+            linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+          background-size: 50px 50px;
+        }
 
-      {results.length > 0 && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>Detected Text in Red Boxes:</h3>
-          <div
-            style={{
-              backgroundColor: "#f5f5f5",
-              padding: "15px",
-              borderRadius: "5px",
-              border: "1px solid #ddd",
-            }}
-          >
-            {results.map((result, index) => (
-              <div
-                key={index}
-                style={{
-                  marginBottom: "10px",
-                  padding: "10px",
-                  backgroundColor: "black",
-                  borderRadius: "3px",
-                }}
-              >
-                <strong>Box {index + 1}:</strong> {result.text}
-                {result.confidence && (
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      color: "white",
-                      marginLeft: "10px",
-                    }}
-                  >
-                    (Confidence: {Math.round(result.confidence)}%)
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+        .bg-binary-rain {
+          background: linear-gradient(
+            transparent 90%,
+            rgba(0, 255, 255, 0.1) 100%
+          );
+          background-size: 100% 10px;
+          animation: binaryRain 1s linear infinite;
+        }
+
+        @keyframes binaryRain {
+          0% {
+            background-position: 0 0;
+          }
+          100% {
+            background-position: 0 10px;
+          }
+        }
+
+        .neon-text {
+          text-shadow: 0 0 5px currentColor, 0 0 10px currentColor,
+            0 0 15px currentColor, 0 0 20px currentColor;
+        }
+
+        .glow-text {
+          text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+        }
+
+        .neon-glow {
+          box-shadow: 0 0 5px rgba(0, 255, 255, 0.5),
+            0 0 10px rgba(0, 255, 255, 0.3),
+            inset 0 0 10px rgba(0, 255, 255, 0.1);
+        }
+
+        .neon-glow-intense {
+          box-shadow: 0 0 15px rgba(0, 255, 255, 0.8),
+            0 0 30px rgba(0, 255, 255, 0.5),
+            inset 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        .neon-terminal {
+          box-shadow: 0 0 30px rgba(0, 255, 255, 0.3),
+            0 0 60px rgba(0, 255, 255, 0.1),
+            inset 0 0 30px rgba(0, 255, 255, 0.05);
+        }
+
+        .neon-upload {
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.2),
+            inset 0 0 20px rgba(0, 255, 255, 0.1);
+        }
+
+        .neon-status {
+          box-shadow: 0 0 15px rgba(0, 255, 255, 0.2),
+            inset 0 0 15px rgba(0, 255, 255, 0.1);
+        }
+
+        .neon-panel {
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.15),
+            inset 0 0 20px rgba(0, 255, 255, 0.05);
+        }
+
+        .neon-result {
+          box-shadow: 0 0 10px rgba(255, 0, 255, 0.3),
+            0 0 20px rgba(255, 0, 255, 0.1);
+        }
+
+        .neon-dot {
+          box-shadow: 0 0 10px currentColor;
+        }
+
+        .neon-icon {
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
+            0 0 40px rgba(0, 255, 255, 0.3);
+        }
+
+        .neon-badge {
+          text-shadow: 0 0 5px rgba(255, 0, 255, 0.7);
+        }
+
+        .neon-confidence {
+          text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+        }
+
+        .neon-text-content {
+          text-shadow: 0 0 3px rgba(0, 255, 255, 0.5);
+        }
+
+        .neon-empty {
+          text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .terminal-scroll::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .terminal-scroll::-webkit-scrollbar-track {
+          background: rgba(0, 255, 255, 0.1);
+          border-radius: 4px;
+        }
+
+        .terminal-scroll::-webkit-scrollbar-thumb {
+          background: rgba(0, 255, 255, 0.3);
+          border-radius: 4px;
+        }
+
+        .terminal-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(0, 255, 255, 0.5);
+        }
+
+        @keyframes pulse-slow {
+          0%,
+          100% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 1;
+          }
+        }
+
+        @keyframes progress {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(100%);
+          }
+        }
+
+        .animate-pulse-slow {
+          animation: pulse-slow 3s ease-in-out infinite;
+        }
+
+        .animate-progress {
+          animation: progress 2s ease-in-out infinite;
+        }
+
+        canvas {
+          max-width: 100%;
+          height: auto;
+          pointer-events: none;
+        }
+
+        .drop-shadow-neon {
+          filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.7));
+        }
+      `}</style>
+    </main>
   );
 }
