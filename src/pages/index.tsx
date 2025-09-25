@@ -90,18 +90,6 @@ export default function Home() {
     fileInputRef.current?.click();
   };
 
-  const handleUploadTress = async (e) => {
-    const file = e.target.files[0];
-
-    const res = await fetch("/api/extract-red-text", {
-      method: "POST",
-      body: file, // send raw image file
-    });
-
-    const data = await res.json();
-    console.log("Text inside red boxes:", data.results);
-  };
-
   return (
     <main className="min-h-screen bg-gray-900 text-cyan-300 p-6 font-mono relative">
       {/* Backgrounds */}
@@ -196,7 +184,6 @@ export default function Home() {
               {processing ? "PROCESSING..." : "UPLOAD & EXTRACT TEXT"}
             </button>
           </form>
-          <input type="file" onChange={handleUploadTress} />
         </div>
 
         {/* Result Section */}
