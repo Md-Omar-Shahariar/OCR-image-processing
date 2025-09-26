@@ -152,7 +152,7 @@ export default function FullPageExtractor() {
           {/* Main Title */}
           <h1 className="text-5xl md:text-6xl font-bold relative bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-pink-400 to-purple-400 tracking-widest neon-text">
             <span className="text-cyan-300 drop-shadow-neon">[</span>
-            OCR_IMAGE_PROCESSOR_v2.0
+            OCR_IMAGE_PROCESSOR
             <span className="text-cyan-300 drop-shadow-neon">]</span>
           </h1>
 

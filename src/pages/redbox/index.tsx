@@ -504,7 +504,7 @@ export default function RedBoxOCR() {
           {/* Main Title */}
           <h1 className="text-5xl md:text-6xl font-bold relative bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-pink-400 to-purple-400 tracking-widest neon-text">
             <span className="text-cyan-300 drop-shadow-neon">[</span>
-            RED_BOX_SCANNER_v2.0
+            RED_BOX_SCANNER
             <span className="text-cyan-300 drop-shadow-neon">]</span>
           </h1>
 
@@ -704,10 +704,38 @@ export default function RedBoxOCR() {
                       ))}
                     </div>
                   ) : (
-                    <div className="h-full flex items-center justify-center text-cyan-600 font-mono tracking-wider text-lg">
-                      {isProcessing
-                        ? "SCANNING_FOR_TEXT..."
-                        : "AWAITING_IMAGE_ANALYSIS"}
+                    <div className="h-96 flex flex-col items-center justify-center text-cyan-600 font-mono tracking-wider">
+                      {/* Hexagonal X Mark */}
+                      <div className="relative mb-6">
+                        {/* Outer Hexagon */}
+                        <div className="w-32 h-32 bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-lg rotate-45 relative neon-hexagon">
+                          {/* Inner Hexagon */}
+                          <div className="absolute inset-4 bg-black/80 rounded-lg rotate-0"></div>
+
+                          {/* X Mark */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="relative w-full h-full">
+                              {/* Diagonal Line 1 */}
+                              <div className="absolute top-1/2 left-1/2 w-24 h-1 bg-red-400 transform -translate-x-1/2 -translate-y-1/2 rotate-45 neon-x-line"></div>
+                              {/* Diagonal Line 2 */}
+                              <div className="absolute top-1/2 left-1/2 w-24 h-1 bg-red-400 transform -translate-x-1/2 -translate-y-1/2 -rotate-45 neon-x-line"></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Pulsing Glow Effect */}
+                        <div className="absolute inset-0 w-32 h-32 bg-red-500/30 rounded-lg rotate-45 blur-xl animate-pulse-slow -z-10"></div>
+                      </div>
+
+                      {/* Status Text */}
+                      <div className="text-center space-y-2">
+                        <div className="text-red-400 text-xl tracking-wider neon-text">
+                          NO_TEXT_DETECTED
+                        </div>
+                        <div className="text-cyan-600 text-sm">
+                          SCAN_COMPLETE - NO_RED_BOXES_FOUND
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -825,6 +853,16 @@ export default function RedBoxOCR() {
 
         .neon-empty {
           text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .neon-hexagon {
+          box-shadow: 0 0 20px rgba(255, 0, 0, 0.5),
+            0 0 40px rgba(255, 0, 0, 0.3), inset 0 0 20px rgba(255, 0, 0, 0.2);
+        }
+
+        .neon-x-line {
+          box-shadow: 0 0 10px rgba(255, 0, 0, 0.8),
+            0 0 20px rgba(255, 0, 0, 0.5);
         }
 
         .terminal-scroll::-webkit-scrollbar {
