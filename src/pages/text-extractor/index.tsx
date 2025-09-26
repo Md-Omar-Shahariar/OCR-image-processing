@@ -14,6 +14,7 @@ export default function FullPageExtractor() {
   const [processing, setProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
   const [scanLinePosition, setScanLinePosition] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -36,6 +37,8 @@ export default function FullPageExtractor() {
     setResults([]);
     setProcessing(true);
 
+    let hasError = false;
+
     for (const file of files) {
       const formData = new FormData();
       formData.append("file", file);
@@ -56,11 +59,16 @@ export default function FullPageExtractor() {
             status: data.status === "success" ? "success" : "error",
           },
         ]);
+
+        if (data.status === "error") {
+          hasError = true;
+        }
       } catch (err) {
         setResults((prev) => [
           ...prev,
           { name: file.name, text: "Error uploading file", status: "error" },
         ]);
+        hasError = true;
       }
     }
 
@@ -68,9 +76,14 @@ export default function FullPageExtractor() {
     setProcessing(false);
     setFiles([]);
 
-    // Show success tick for 2 seconds
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 2000);
+    // Show success or error popup for 2 seconds
+    if (hasError) {
+      setShowError(true);
+      setTimeout(() => setShowError(false), 2000);
+    } else {
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -152,7 +165,7 @@ export default function FullPageExtractor() {
           {/* Main Title */}
           <h1 className="text-5xl md:text-6xl font-bold relative bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-pink-400 to-purple-400 tracking-widest neon-text">
             <span className="text-cyan-300 drop-shadow-neon">[</span>
-            OCR_IMAGE_PROCESSOR_v2.0
+            OCR_IMAGE_PROCESSOR
             <span className="text-cyan-300 drop-shadow-neon">]</span>
           </h1>
 
@@ -390,7 +403,7 @@ export default function FullPageExtractor() {
         </div>
       </div>
 
-      {/* Enhanced Blue Tick Popup */}
+      {/* Success Popup */}
       {showSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="relative w-64 h-64">
@@ -465,182 +478,80 @@ export default function FullPageExtractor() {
         </div>
       )}
 
-      {/* Global Cyberpunk Styles */}
-      <style jsx global>{`
-        .bg-grid-pattern {
-          background-image: linear-gradient(
-              rgba(0, 255, 255, 0.1) 1px,
-              transparent 1px
-            ),
-            linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
-          background-size: 50px 50px;
-        }
+      {/* Error Popup */}
+      {showError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="relative w-64 h-64">
+            {/* Outer Glow Ring */}
+            <div className="absolute inset-0 rounded-full bg-red-500/30 animate-ping-slow"></div>
 
-        .bg-binary-rain {
-          background: linear-gradient(
-            transparent 90%,
-            rgba(0, 255, 255, 0.1) 100%
-          );
-          background-size: 100% 10px;
-          animation: binaryRain 1s linear infinite;
-        }
+            {/* Cyberpunk Hexagon */}
+            <svg
+              className="absolute inset-0 w-full h-full text-red-400 animate-pulse"
+              viewBox="0 0 100 100"
+            >
+              <polygon
+                points="50,5 85,25 85,75 50,95 15,75 15,25"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeDasharray="5,3"
+              />
+            </svg>
 
-        @keyframes binaryRain {
-          0% {
-            background-position: 0 0;
-          }
-          100% {
-            background-position: 0 10px;
-          }
-        }
+            {/* Inner Hexagon with Neon Glow */}
+            <svg
+              className="absolute inset-0 m-auto w-40 h-40 text-red-500"
+              viewBox="0 0 100 100"
+            >
+              <polygon
+                points="50,15 75,30 75,70 50,85 25,70 25,30"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                style={{
+                  filter: "drop-shadow(0 0 10px rgba(255, 0, 0, 0.8))",
+                }}
+              />
+            </svg>
 
-        .neon-text {
-          text-shadow: 0 0 5px currentColor, 0 0 10px currentColor,
-            0 0 15px currentColor, 0 0 20px currentColor;
-        }
+            {/* Animated Red X Mark */}
+            <svg
+              className="absolute inset-0 m-auto w-24 h-24 text-red-400"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="4"
+              viewBox="0 0 24 24"
+              style={{ filter: "drop-shadow(0 0 15px rgba(255, 0, 0, 1))" }}
+            >
+              <path
+                d="M6 18L18 6M6 6l12 12"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
 
-        .glow-text {
-          text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
-        }
+            {/* Enhanced Glowing Particles */}
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-3 h-3 bg-red-400 rounded-full animate-float"
+                style={{
+                  top: `${50 + 40 * Math.sin((i * Math.PI) / 4)}%`,
+                  left: `${50 + 40 * Math.cos((i * Math.PI) / 4)}%`,
+                  animationDelay: `${i * 0.15}s`,
+                  filter: "drop-shadow(0 0 8px rgba(255, 0, 0, 0.9))",
+                }}
+              ></div>
+            ))}
 
-        .neon-glow {
-          box-shadow: 0 0 5px rgba(0, 255, 255, 0.5),
-            0 0 10px rgba(0, 255, 255, 0.3),
-            inset 0 0 10px rgba(0, 255, 255, 0.1);
-        }
-
-        .neon-glow-intense {
-          box-shadow: 0 0 15px rgba(0, 255, 255, 0.8),
-            0 0 30px rgba(0, 255, 255, 0.5),
-            inset 0 0 20px rgba(0, 255, 255, 0.2);
-        }
-
-        .neon-terminal {
-          box-shadow: 0 0 30px rgba(0, 255, 255, 0.3),
-            0 0 60px rgba(0, 255, 255, 0.1),
-            inset 0 0 30px rgba(0, 255, 255, 0.05);
-        }
-
-        .neon-upload {
-          box-shadow: 0 0 20px rgba(0, 255, 255, 0.2),
-            inset 0 0 20px rgba(0, 255, 255, 0.1);
-        }
-
-        .neon-panel {
-          box-shadow: 0 0 20px rgba(0, 255, 255, 0.15),
-            inset 0 0 20px rgba(0, 255, 255, 0.05);
-        }
-
-        .neon-result {
-          box-shadow: 0 0 10px rgba(255, 0, 255, 0.3),
-            0 0 20px rgba(255, 0, 255, 0.1);
-        }
-
-        .neon-dot {
-          box-shadow: 0 0 10px currentColor;
-        }
-
-        .neon-icon {
-          box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
-            0 0 40px rgba(0, 255, 255, 0.3);
-        }
-
-        .neon-badge {
-          text-shadow: 0 0 5px rgba(255, 0, 255, 0.7);
-        }
-
-        .neon-text-content {
-          text-shadow: 0 0 3px rgba(0, 255, 255, 0.5);
-        }
-
-        .neon-empty {
-          text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-        }
-
-        .terminal-scroll::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .terminal-scroll::-webkit-scrollbar-track {
-          background: rgba(0, 255, 255, 0.1);
-          border-radius: 4px;
-        }
-
-        .terminal-scroll::-webkit-scrollbar-thumb {
-          background: rgba(0, 255, 255, 0.3);
-          border-radius: 4px;
-        }
-
-        .terminal-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(0, 255, 255, 0.5);
-        }
-
-        @keyframes pulse-slow {
-          0%,
-          100% {
-            opacity: 0.3;
-          }
-          50% {
-            opacity: 1;
-          }
-        }
-
-        @keyframes progress {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
-        }
-
-        @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: translateY(-20px) scale(1.2);
-            opacity: 0.7;
-          }
-        }
-
-        .animate-pulse-slow {
-          animation: pulse-slow 3s ease-in-out infinite;
-        }
-
-        .animate-progress {
-          animation: progress 2s ease-in-out infinite;
-        }
-
-        .animate-float {
-          animation: float 2s ease-in-out infinite;
-        }
-
-        .drop-shadow-neon {
-          filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.7));
-        }
-
-        @keyframes ping-slow {
-          0% {
-            transform: scale(0.8);
-            opacity: 0.8;
-          }
-          50% {
-            transform: scale(1.2);
-            opacity: 0.5;
-          }
-          100% {
-            transform: scale(1.4);
-            opacity: 0;
-          }
-        }
-
-        .animate-ping-slow {
-          animation: ping-slow 2s ease-out forwards;
-        }
-      `}</style>
+            {/* Error Text */}
+            <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-red-400 font-mono tracking-wider text-lg glow-text-red whitespace-nowrap">
+              PROCESSING_ERROR
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

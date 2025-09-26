@@ -504,7 +504,7 @@ export default function RedBoxOCR() {
           {/* Main Title */}
           <h1 className="text-5xl md:text-6xl font-bold relative bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-pink-400 to-purple-400 tracking-widest neon-text">
             <span className="text-cyan-300 drop-shadow-neon">[</span>
-            RED_BOX_SCANNER_v2.0
+            RED_BOX_SCANNER
             <span className="text-cyan-300 drop-shadow-neon">]</span>
           </h1>
 
@@ -704,10 +704,38 @@ export default function RedBoxOCR() {
                       ))}
                     </div>
                   ) : (
-                    <div className="h-full flex items-center justify-center text-cyan-600 font-mono tracking-wider text-lg">
-                      {isProcessing
-                        ? "SCANNING_FOR_TEXT..."
-                        : "AWAITING_IMAGE_ANALYSIS"}
+                    <div className="h-96 flex flex-col items-center justify-center text-cyan-600 font-mono tracking-wider">
+                      {/* Hexagonal X Mark */}
+                      <div className="relative mb-6">
+                        {/* Outer Hexagon */}
+                        <div className="w-32 h-32 bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-lg rotate-45 relative neon-hexagon">
+                          {/* Inner Hexagon */}
+                          <div className="absolute inset-4 bg-black/80 rounded-lg rotate-0"></div>
+
+                          {/* X Mark */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="relative w-full h-full">
+                              {/* Diagonal Line 1 */}
+                              <div className="absolute top-1/2 left-1/2 w-24 h-1 bg-red-400 transform -translate-x-1/2 -translate-y-1/2 rotate-45 neon-x-line"></div>
+                              {/* Diagonal Line 2 */}
+                              <div className="absolute top-1/2 left-1/2 w-24 h-1 bg-red-400 transform -translate-x-1/2 -translate-y-1/2 -rotate-45 neon-x-line"></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Pulsing Glow Effect */}
+                        <div className="absolute inset-0 w-32 h-32 bg-red-500/30 rounded-lg rotate-45 blur-xl animate-pulse-slow -z-10"></div>
+                      </div>
+
+                      {/* Status Text */}
+                      <div className="text-center space-y-2">
+                        <div className="text-red-400 text-xl tracking-wider neon-text">
+                          NO_TEXT_DETECTED
+                        </div>
+                        <div className="text-cyan-600 text-sm">
+                          SCAN_COMPLETE - NO_RED_BOXES_FOUND
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -725,163 +753,6 @@ export default function RedBoxOCR() {
 
         {/* System Footer */}
       </div>
-
-      {/* Global Cyberpunk Styles */}
-      <style jsx global>{`
-        .bg-grid-pattern {
-          background-image: linear-gradient(
-              rgba(0, 255, 255, 0.1) 1px,
-              transparent 1px
-            ),
-            linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
-          background-size: 50px 50px;
-        }
-
-        .bg-binary-rain {
-          background: linear-gradient(
-            transparent 90%,
-            rgba(0, 255, 255, 0.1) 100%
-          );
-          background-size: 100% 10px;
-          animation: binaryRain 1s linear infinite;
-        }
-
-        @keyframes binaryRain {
-          0% {
-            background-position: 0 0;
-          }
-          100% {
-            background-position: 0 10px;
-          }
-        }
-
-        .neon-text {
-          text-shadow: 0 0 5px currentColor, 0 0 10px currentColor,
-            0 0 15px currentColor, 0 0 20px currentColor;
-        }
-
-        .glow-text {
-          text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
-        }
-
-        .neon-glow {
-          box-shadow: 0 0 5px rgba(0, 255, 255, 0.5),
-            0 0 10px rgba(0, 255, 255, 0.3),
-            inset 0 0 10px rgba(0, 255, 255, 0.1);
-        }
-
-        .neon-glow-intense {
-          box-shadow: 0 0 15px rgba(0, 255, 255, 0.8),
-            0 0 30px rgba(0, 255, 255, 0.5),
-            inset 0 0 20px rgba(0, 255, 255, 0.2);
-        }
-
-        .neon-terminal {
-          box-shadow: 0 0 30px rgba(0, 255, 255, 0.3),
-            0 0 60px rgba(0, 255, 255, 0.1),
-            inset 0 0 30px rgba(0, 255, 255, 0.05);
-        }
-
-        .neon-upload {
-          box-shadow: 0 0 20px rgba(0, 255, 255, 0.2),
-            inset 0 0 20px rgba(0, 255, 255, 0.1);
-        }
-
-        .neon-status {
-          box-shadow: 0 0 15px rgba(0, 255, 255, 0.2),
-            inset 0 0 15px rgba(0, 255, 255, 0.1);
-        }
-
-        .neon-panel {
-          box-shadow: 0 0 20px rgba(0, 255, 255, 0.15),
-            inset 0 0 20px rgba(0, 255, 255, 0.05);
-        }
-
-        .neon-result {
-          box-shadow: 0 0 10px rgba(255, 0, 255, 0.3),
-            0 0 20px rgba(255, 0, 255, 0.1);
-        }
-
-        .neon-dot {
-          box-shadow: 0 0 10px currentColor;
-        }
-
-        .neon-icon {
-          box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
-            0 0 40px rgba(0, 255, 255, 0.3);
-        }
-
-        .neon-badge {
-          text-shadow: 0 0 5px rgba(255, 0, 255, 0.7);
-        }
-
-        .neon-confidence {
-          text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
-        }
-
-        .neon-text-content {
-          text-shadow: 0 0 3px rgba(0, 255, 255, 0.5);
-        }
-
-        .neon-empty {
-          text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-        }
-
-        .terminal-scroll::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .terminal-scroll::-webkit-scrollbar-track {
-          background: rgba(0, 255, 255, 0.1);
-          border-radius: 4px;
-        }
-
-        .terminal-scroll::-webkit-scrollbar-thumb {
-          background: rgba(0, 255, 255, 0.3);
-          border-radius: 4px;
-        }
-
-        .terminal-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(0, 255, 255, 0.5);
-        }
-
-        @keyframes pulse-slow {
-          0%,
-          100% {
-            opacity: 0.3;
-          }
-          50% {
-            opacity: 1;
-          }
-        }
-
-        @keyframes progress {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
-        }
-
-        .animate-pulse-slow {
-          animation: pulse-slow 3s ease-in-out infinite;
-        }
-
-        .animate-progress {
-          animation: progress 2s ease-in-out infinite;
-        }
-
-        canvas {
-          max-width: 100%;
-          height: auto;
-          pointer-events: none;
-        }
-
-        .drop-shadow-neon {
-          filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.7));
-        }
-      `}</style>
     </main>
   );
 }
