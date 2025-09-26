@@ -21,7 +21,7 @@ interface OCRResult {
 // Declare OpenCV types
 declare global {
   interface Window {
-    cv: any;
+    cv: import("../../types/opencv").CV | null;
     isOpenCVLoading?: boolean;
     isOpenCVLoaded?: boolean;
   }
@@ -288,30 +288,10 @@ export default function RedBoxOCR() {
           window.cv.cvtColor(src, hsv, window.cv.COLOR_RGBA2RGB);
           window.cv.cvtColor(hsv, hsv, window.cv.COLOR_RGB2HSV);
 
-          const lowRed1 = new window.cv.Mat(
-            hsv.rows,
-            hsv.cols,
-            hsv.type(),
-            createScalar(0, 100, 100)
-          );
-          const highRed1 = new window.cv.Mat(
-            hsv.rows,
-            hsv.cols,
-            hsv.type(),
-            createScalar(10, 255, 255)
-          );
-          const lowRed2 = new window.cv.Mat(
-            hsv.rows,
-            hsv.cols,
-            hsv.type(),
-            createScalar(160, 100, 100)
-          );
-          const highRed2 = new window.cv.Mat(
-            hsv.rows,
-            hsv.cols,
-            hsv.type(),
-            createScalar(180, 255, 255)
-          );
+          const lowRed1 = new window.cv.Scalar(0, 100, 100, 0);
+          const highRed1 = new window.cv.Scalar(10, 255, 255, 0);
+          const lowRed2 = new window.cv.Scalar(160, 100, 100, 0);
+          const highRed2 = new window.cv.Scalar(180, 255, 255, 0);
 
           const mask1 = new window.cv.Mat();
           const mask2 = new window.cv.Mat();
