@@ -138,9 +138,7 @@ export default function FullPageExtractor() {
       >
         <div className="flex items-center space-x-3">
           <div className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse"></div>
-          <span className="font-mono text-sm tracking-wider">
-            RETURN_TO_MAINFRAME
-          </span>
+          <span className="font-mono text-sm tracking-wider">Home</span>
           <div className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse delay-1000"></div>
         </div>
       </button>
