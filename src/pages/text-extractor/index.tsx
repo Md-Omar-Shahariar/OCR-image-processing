@@ -552,6 +552,183 @@ export default function FullPageExtractor() {
           </div>
         </div>
       )}
+
+      {/* Global Cyberpunk Styles */}
+      <style jsx global>{`
+        .bg-grid-pattern {
+          background-image: linear-gradient(
+              rgba(0, 255, 255, 0.1) 1px,
+              transparent 1px
+            ),
+            linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+          background-size: 50px 50px;
+        }
+
+        .bg-binary-rain {
+          background: linear-gradient(
+            transparent 90%,
+            rgba(0, 255, 255, 0.1) 100%
+          );
+          background-size: 100% 10px;
+          animation: binaryRain 1s linear infinite;
+        }
+
+        @keyframes binaryRain {
+          0% {
+            background-position: 0 0;
+          }
+          100% {
+            background-position: 0 10px;
+          }
+        }
+
+        .neon-text {
+          text-shadow: 0 0 5px currentColor, 0 0 10px currentColor,
+            0 0 15px currentColor, 0 0 20px currentColor;
+        }
+
+        .glow-text {
+          text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+        }
+
+        .neon-glow {
+          box-shadow: 0 0 5px rgba(0, 255, 255, 0.5),
+            0 0 10px rgba(0, 255, 255, 0.3),
+            inset 0 0 10px rgba(0, 255, 255, 0.1);
+        }
+
+        .neon-glow-intense {
+          box-shadow: 0 0 15px rgba(0, 255, 255, 0.8),
+            0 0 30px rgba(0, 255, 255, 0.5),
+            inset 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        .neon-terminal {
+          box-shadow: 0 0 30px rgba(0, 255, 255, 0.3),
+            0 0 60px rgba(0, 255, 255, 0.1),
+            inset 0 0 30px rgba(0, 255, 255, 0.05);
+        }
+
+        .neon-upload {
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.2),
+            inset 0 0 20px rgba(0, 255, 255, 0.1);
+        }
+
+        .neon-panel {
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.15),
+            inset 0 0 20px rgba(0, 255, 255, 0.05);
+        }
+
+        .neon-result {
+          box-shadow: 0 0 10px rgba(255, 0, 255, 0.3),
+            0 0 20px rgba(255, 0, 255, 0.1);
+        }
+
+        .neon-dot {
+          box-shadow: 0 0 10px currentColor;
+        }
+
+        .neon-icon {
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
+            0 0 40px rgba(0, 255, 255, 0.3);
+        }
+
+        .neon-badge {
+          text-shadow: 0 0 5px rgba(255, 0, 255, 0.7);
+        }
+
+        .neon-text-content {
+          text-shadow: 0 0 3px rgba(0, 255, 255, 0.5);
+        }
+
+        .neon-empty {
+          text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .terminal-scroll::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .terminal-scroll::-webkit-scrollbar-track {
+          background: rgba(0, 255, 255, 0.1);
+          border-radius: 4px;
+        }
+
+        .terminal-scroll::-webkit-scrollbar-thumb {
+          background: rgba(0, 255, 255, 0.3);
+          border-radius: 4px;
+        }
+
+        .terminal-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(0, 255, 255, 0.5);
+        }
+
+        @keyframes pulse-slow {
+          0%,
+          100% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 1;
+          }
+        }
+
+        @keyframes progress {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(100%);
+          }
+        }
+
+        @keyframes float {
+          0%,
+          100% {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: translateY(-20px) scale(1.2);
+            opacity: 0.7;
+          }
+        }
+
+        .animate-pulse-slow {
+          animation: pulse-slow 3s ease-in-out infinite;
+        }
+
+        .animate-progress {
+          animation: progress 2s ease-in-out infinite;
+        }
+
+        .animate-float {
+          animation: float 2s ease-in-out infinite;
+        }
+
+        .drop-shadow-neon {
+          filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.7));
+        }
+
+        @keyframes ping-slow {
+          0% {
+            transform: scale(0.8);
+            opacity: 0.8;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 0.5;
+          }
+          100% {
+            transform: scale(1.4);
+            opacity: 0;
+          }
+        }
+
+        .animate-ping-slow {
+          animation: ping-slow 2s ease-out forwards;
+        }
+      `}</style>
     </main>
   );
 }
