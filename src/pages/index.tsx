@@ -94,6 +94,78 @@ export default function HomePage() {
             ></div>
           </div>
 
+          {/* Full Page OCR Title Card - UPDATED DESIGN */}
+          <div
+            className={`relative group cursor-pointer transition-all duration-500 ${
+              hoveredButton === "title" ? "scale-105" : "scale-100"
+            }`}
+            onMouseEnter={() => setHoveredButton("title")}
+            onMouseLeave={() => setHoveredButton(null)}
+            onClick={() => navigateTo("/title-extractor")}
+          >
+            {/* Golden gradient glow effect */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-400 via-orange-500 to-amber-500 rounded-xl blur opacity-40 group-hover:opacity-80 transition duration-300"></div>
+            
+            {/* Main card with golden border */}
+            <div className="relative bg-gray-800 rounded-xl p-8 border-2 border-amber-500/40 hover:border-amber-400/70 transition-all duration-300 h-full backdrop-blur-sm">
+              {/* Decorative corner accents */}
+              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-amber-400 rounded-tl-xl"></div>
+              <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-amber-400 rounded-tr-xl"></div>
+              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-amber-400 rounded-bl-xl"></div>
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-amber-400 rounded-br-xl"></div>
+              
+              <div className="text-center relative z-10">
+                {/* Golden icon with sparkle effect */}
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-amber-500/30 relative">
+                  <svg
+                    className="w-8 h-8 text-gray-900"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                    />
+                  </svg>
+                  {/* Sparkle dots */}
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
+                  <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-amber-300 rounded-full animate-ping delay-300"></div>
+                </div>
+
+                {/* Title with golden gradient */}
+                <h3 className="text-2xl font-bold mb-3 bg-gradient-to-r from-amber-300 to-yellow-400 bg-clip-text text-transparent group-hover:from-yellow-200 group-hover:to-amber-200 transition-all duration-300">
+                  TITLE_EXTRACTOR
+                </h3>
+
+                <p className="text-gray-300 text-sm leading-relaxed mb-6 group-hover:text-gray-200 transition-colors">
+                  Advanced AI-powered title and URL extraction from search result screenshots. 
+                  Automatically detects and structures titles with their corresponding URLs.
+                </p>
+
+                {/* Feature list with golden accents */}
+                <div className="space-y-2 text-xs">
+                  <div className="text-amber-500 group-hover:text-amber-400 transition-colors">• SMART_TITLE_DETECTION</div>
+                  <div className="text-yellow-600 group-hover:text-yellow-500 transition-colors">• URL_EXTRACTION</div>
+                  <div className="text-amber-500 group-hover:text-amber-400 transition-colors">• SEARCH_RESULT_PARSING</div>
+                  <div className="text-yellow-600 group-hover:text-yellow-500 transition-colors">• STRUCTURED_OUTPUT</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Animated golden status dot */}
+            <div
+              className={`absolute top-4 right-4 w-3 h-3 bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full animate-pulse ${
+                hoveredButton === "title" ? "opacity-100 scale-125" : "opacity-60"
+              } transition-all duration-300`}
+            ></div>
+
+            {/* Subtle shine effect on hover */}
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -skew-x-12 group-hover:skew-x-0 transform transition-transform duration-500"></div>
+          </div>
+
           {/* Red Box OCR Card */}
           <div
             className={`relative group cursor-pointer transition-all duration-500 ${
@@ -167,6 +239,27 @@ export default function HomePage() {
             <span>LAUNCH_FULL_PAGE_OCR</span>
           </button>
 
+          {/* New Golden Button for Title Extractor */}
+          <button
+            onClick={() => navigateTo("/title-extractor")}
+            className="px-8 py-4 bg-gradient-to-r from-amber-600 to-yellow-600 rounded-lg font-medium text-gray-900 hover:from-amber-500 hover:to-yellow-500 transition-all duration-300 shadow-lg shadow-amber-500/30 hover:shadow-yellow-400/40 flex items-center justify-center space-x-3 font-bold"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+              />
+            </svg>
+            <span>LAUNCH_TITLE_EXTRACTOR</span>
+          </button>
+
           <button
             onClick={() => navigateTo("/redbox")}
             className="px-8 py-4 bg-gradient-to-r from-purple-600 to-red-600 rounded-lg font-medium text-white hover:from-purple-500 hover:to-red-500 transition-all duration-300 shadow-lg shadow-purple-500/30 hover:shadow-red-400/40 flex items-center justify-center space-x-3"
@@ -198,6 +291,10 @@ export default function HomePage() {
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
               <span>OCR_ENGINES_READY</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+              <span>TITLE_EXTRACTOR_ACTIVE</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
