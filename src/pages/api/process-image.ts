@@ -10,7 +10,7 @@ export const config = {
   api: { bodyParser: false },
 };
 
-const API_KEY = process.env.OCR_SPACE_API_KEY_2 || "";
+const API_KEY = process.env.OCR_SPACE_API_KEY || "";
 const URL = "https://api.ocr.space/parse/image";
 const MAX_SIZE = 2000;
 const CONTRAST = 2;
