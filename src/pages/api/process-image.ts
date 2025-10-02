@@ -1,149 +1,173 @@
-import formidable from "formidable";
-import fs from "fs";
-import fetch from "node-fetch";
-import sharp from "sharp";
-import FormData from "form-data";
-import type { NextApiRequest, NextApiResponse } from "next";
-import type { IncomingMessage } from "http";
+// pages/api/process-image.ts
+import { NextApiRequest, NextApiResponse } from "next";
+import Busboy from "busboy";
 
 export const config = {
-  api: { bodyParser: false },
+  api: {
+    bodyParser: false,
+    responseLimit: "10mb",
+  },
 };
 
 const API_KEY = process.env.OCR_SPACE_API_KEY || "";
-const URL = "https://api.ocr.space/parse/image";
-const MAX_SIZE = 2000;
-const CONTRAST = 2;
 
-interface OcrSpaceParsedResult {
-  ParsedText?: string;
-}
-
-interface OcrSpaceResponse {
-  IsErroredOnProcessing?: boolean;
-  ErrorMessage?: string[];
-  ParsedResults?: OcrSpaceParsedResult[];
-}
-
-async function processOCR(
-  imageBuffer: Buffer,
-  language: string,
-  engine: "1" | "2"
-) {
-  const formData = new FormData();
-  formData.append("file", imageBuffer, {
-    filename: "image.png",
-    contentType: "image/png",
-  });
-  formData.append("apikey", API_KEY);
-  formData.append("language", language);
-  formData.append("OCREngine", engine);
-
-  const response = await fetch(URL, { method: "POST", body: formData });
-  const result: OcrSpaceResponse = (await response.json()) as OcrSpaceResponse;
-  return result;
-}
-
-function cleanSearchQueries(text: string): string {
-  return (
-    text
-      // Split into lines
-      .split("\n")
-      // Process each line individually
-      .map((line) =>
-        line
-          // Remove Q characters and any following punctuation/spaces
-          .replace(/Q[ ,、]?\s*/g, "")
-          // Normalize multiple spaces to single spaces
-          .replace(/\s+/g, " ")
-          // Trim leading/trailing spaces
-          .trim()
-      )
-      // Remove empty lines
-      .filter((line) => line.length > 0)
-      // Join back with newlines
-      .join("\n")
-  );
+interface ApiResponse {
+  status: "success" | "error";
+  text?: string;
+  message?: string;
 }
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<ApiResponse>
 ) {
+  // Set CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  // Only allow POST requests
   if (req.method !== "POST") {
-    return res
-      .status(405)
-      .json({ status: "error", message: "Method not allowed" });
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).json({
+      status: "error",
+      message: `Method ${req.method} Not Allowed`,
+    });
   }
 
   try {
-    const { fields, files } = await new Promise<{
-      fields: formidable.Fields;
-      files: formidable.Files;
+    const { fields, fileBuffer } = await new Promise<{
+      fields: { language?: string };
+      fileBuffer: Buffer;
     }>((resolve, reject) => {
-      const form = formidable();
-      form.parse(req as IncomingMessage, (err, fields, files) => {
-        if (err) reject(err);
-        else resolve({ fields, files });
+      const busboy = Busboy({
+        headers: req.headers,
+        limits: {
+          fileSize: 10 * 1024 * 1024, // 10MB limit
+        },
       });
+
+      const fields: { language?: string } = {};
+      let fileBuffer: Buffer = Buffer.alloc(0);
+
+      busboy.on("field", (name: string, value: string) => {
+        if (name === "language") {
+          fields.language = value;
+        }
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      busboy.on("file", (name: string, file: any, info: any) => {
+        const { mimeType } = info;
+
+        if (name !== "file") {
+          file.resume();
+          return;
+        }
+
+        if (!mimeType?.startsWith("image/")) {
+          reject(new Error("Invalid file type. Please upload an image."));
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        file.on("data", (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
+
+        file.on("end", () => {
+          fileBuffer = Buffer.concat(chunks);
+        });
+
+        file.on("error", (error: Error) => {
+          reject(error);
+        });
+      });
+
+      busboy.on("finish", () => {
+        resolve({ fields, fileBuffer });
+      });
+
+      busboy.on("error", (error: Error) => {
+        reject(error);
+      });
+
+      req.on("error", (error: Error) => {
+        reject(error);
+      });
+
+      req.pipe(busboy);
     });
 
-    const language: string[] = Array.isArray(fields.language)
-      ? fields.language
-      : [fields.language ?? "jpn"];
-
-    if (!files.file || !Array.isArray(files.file) || !files.file[0]) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "No file uploaded." });
-    }
-
-    const filePath: string = files.file[0].filepath;
-    let imageBuffer: Buffer = fs.readFileSync(filePath);
-
-    // Preprocess image
-    imageBuffer = await sharp(imageBuffer)
-      .resize({ width: MAX_SIZE, height: MAX_SIZE, fit: "inside" })
-      .grayscale()
-      .modulate({ brightness: 1, saturation: CONTRAST })
-      .png()
-      .toBuffer();
-
-    // Try Engine 2 first
-    let result = await processOCR(imageBuffer, language[0], "2");
-    console.log("Engine 2 response:", result);
-
-    // If Engine 2 fails or server busy
-    if (
-      result?.IsErroredOnProcessing ||
-      result?.ErrorMessage?.[0]?.includes("Server busy")
-    ) {
-      console.warn(
-        "Engine 2 failed or busy. Retrying Engine 1 in 1 seconds..."
-      );
-      await new Promise((r) => setTimeout(r, 1000));
-      result = await processOCR(imageBuffer, language[0], "1");
-      console.log("Engine 1 response:", result);
-    }
-
-    if (result?.IsErroredOnProcessing) {
-      return res.status(500).json({
+    if (!fileBuffer || fileBuffer.length === 0) {
+      return res.status(400).json({
         status: "error",
-        message: result?.ErrorMessage?.[0] || "OCR processing error",
+        message: "No file uploaded or file is empty.",
       });
     }
 
-    const rawText: string = result?.ParsedResults?.[0]?.ParsedText || "";
-    const cleanedText = cleanSearchQueries(rawText);
+    const language = fields.language || "jpn";
+
+    // Convert buffer to base64 for OCR.space
+    const base64Image = fileBuffer.toString("base64");
+
+    const formData = new FormData();
+    formData.append("base64Image", `data:image/jpeg;base64,${base64Image}`);
+    formData.append("apikey", API_KEY);
+    formData.append("language", language);
+    formData.append("OCREngine", "2");
+    formData.append("isOverlayRequired", "false");
+    formData.append("scale", "true");
+
+    const ocrResponse = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!ocrResponse.ok) {
+      throw new Error(`OCR API error: ${ocrResponse.status}`);
+    }
+
+    const ocrResult = await ocrResponse.json();
+
+    if (ocrResult.IsErroredOnProcessing) {
+      return res.status(500).json({
+        status: "error",
+        message: ocrResult.ErrorMessage?.[0] || "OCR processing failed",
+      });
+    }
+
+    const rawText: string = ocrResult.ParsedResults?.[0]?.ParsedText || "";
+
+    // Simple text cleaning
+    const cleanedText = rawText
+      .split("\n")
+      .map((line) =>
+        line
+          .replace(/Q[ ,、]?\s*/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+      )
+      .filter((line) => line.length > 0)
+      .join("\n");
 
     return res.status(200).json({
       status: "success",
       text: cleanedText,
     });
   } catch (error: unknown) {
-    console.error("OCR API Error:", error);
-    const message: string =
-      error instanceof Error ? error.message : "Unknown error";
-    return res.status(500).json({ status: "error", message });
+    console.error("API Error:", error);
+    const message =
+      error instanceof Error ? error.message : "Unknown error occurred";
+
+    return res.status(500).json({
+      status: "error",
+      message: message,
+    });
   }
 }
