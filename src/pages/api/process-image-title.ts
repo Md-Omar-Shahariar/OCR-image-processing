@@ -1,9 +1,6 @@
-// pages/api/process-search-image.ts
+// pages/api/process-image-title.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import Busboy from "busboy";
-import fetch from "node-fetch";
-import sharp from "sharp";
-import FormData from "form-data";
 
 export const config = {
   api: {
@@ -13,9 +10,6 @@ export const config = {
 };
 
 const API_KEY = process.env.OCR_SPACE_API_KEY || "";
-const URL = "https://api.ocr.space/parse/image";
-const MAX_SIZE = 2000;
-const CONTRAST = 2;
 
 interface OcrSpaceParsedResult {
   ParsedText?: string;
@@ -46,16 +40,27 @@ async function processOCR(
   language: string,
   engine: "1" | "2"
 ): Promise<OcrSpaceResponse> {
+  // Convert to base64 for OCR.space API
+  const base64Image = imageBuffer.toString("base64");
+
   const formData = new FormData();
-  formData.append("file", imageBuffer, {
-    filename: "image.png",
-    contentType: "image/png",
-  });
+  formData.append("base64Image", `data:image/jpeg;base64,${base64Image}`);
   formData.append("apikey", API_KEY);
   formData.append("language", language);
   formData.append("OCREngine", engine);
+  formData.append("isOverlayRequired", "false");
+  formData.append("scale", "true");
+  formData.append("detectOrientation", "true");
 
-  const response = await fetch(URL, { method: "POST", body: formData });
+  const response = await fetch("https://api.ocr.space/parse/image", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`OCR API error: ${response.status} ${response.statusText}`);
+  }
+
   const result: OcrSpaceResponse = await response.json();
   return result;
 }
@@ -292,23 +297,8 @@ export default async function handler(
 
     const language = fields.language || "jpn";
 
-    // Preprocess image with sharp
-    let processedImageBuffer: Buffer;
-    try {
-      processedImageBuffer = await sharp(fileBuffer)
-        .resize({ width: MAX_SIZE, height: MAX_SIZE, fit: "inside" })
-        .grayscale()
-        .modulate({ brightness: 1, saturation: CONTRAST })
-        .png()
-        .toBuffer();
-    } catch (sharpError) {
-      console.error("Image processing error:", sharpError);
-      // If sharp fails, use original image buffer
-      processedImageBuffer = fileBuffer;
-    }
-
-    // Try Engine 2 first
-    let result = await processOCR(processedImageBuffer, language, "2");
+    // Try Engine 2 first (no image preprocessing)
+    let result = await processOCR(fileBuffer, language, "2");
     console.log("Engine 2 response received");
 
     // If Engine 2 fails or server busy
@@ -318,7 +308,7 @@ export default async function handler(
     ) {
       console.warn("Engine 2 failed or busy. Retrying Engine 1...");
       await new Promise((r) => setTimeout(r, 1000));
-      result = await processOCR(processedImageBuffer, language, "1");
+      result = await processOCR(fileBuffer, language, "1");
       console.log("Engine 1 response received");
     }
 
