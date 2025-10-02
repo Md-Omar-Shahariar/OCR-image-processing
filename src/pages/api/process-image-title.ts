@@ -10,7 +10,7 @@ export const config = {
   api: { bodyParser: false },
 };
 
-const API_KEY = process.env.OCR_SPACE_API_KEY || "";
+const API_KEY = process.env.OCR_SPACE_API_KEY_2 || "";
 const URL = "https://api.ocr.space/parse/image";
 const MAX_SIZE = 2000;
 const CONTRAST = 2;
@@ -51,19 +51,19 @@ interface SearchResult {
 
 function extractSearchResults(text: string): SearchResult[] {
   console.log("Raw OCR text for analysis:", text);
-  
+
   const results: SearchResult[] = [];
   const lines = text
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0);
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 
   console.log("Cleaned lines:", lines);
 
   // Method 1: Look for URL patterns and pair with preceding text
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
+
     // Enhanced URL detection
     const urlMatch = line.match(
       /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
@@ -74,17 +74,21 @@ function extractSearchResults(text: string): SearchResult[] {
       console.log(`Found URL: ${url} at line ${i}`);
 
       // Look for title in previous lines
-      let title = '';
+      let title = "";
       for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
         const potentialTitle = lines[j];
         // A good title should be meaningful text, not too short/long
-        if (potentialTitle && 
-            potentialTitle.length > 5 && 
-            potentialTitle.length < 150 &&
-            !potentialTitle.match(/https?:\/\//) &&
-            !potentialTitle.match(/^(Q|广告|Sponsored|相关搜索|Related|Search|时间|找到)/) &&
-            !potentialTitle.match(/^[0-9\s\.-]+$/) &&
-            !potentialTitle.includes('...')) {
+        if (
+          potentialTitle &&
+          potentialTitle.length > 5 &&
+          potentialTitle.length < 150 &&
+          !potentialTitle.match(/https?:\/\//) &&
+          !potentialTitle.match(
+            /^(Q|广告|Sponsored|相关搜索|Related|Search|时间|找到)/
+          ) &&
+          !potentialTitle.match(/^[0-9\s\.-]+$/) &&
+          !potentialTitle.includes("...")
+        ) {
           title = potentialTitle;
           console.log(`Found title: "${title}" for URL: ${url}`);
           break;
@@ -93,15 +97,15 @@ function extractSearchResults(text: string): SearchResult[] {
 
       // If no title found in previous lines, try to extract from current line
       if (!title && line.length > url.length + 5) {
-        title = line.replace(url, '').trim();
+        title = line.replace(url, "").trim();
         // Clean up title (remove special characters from start/end)
-        title = title.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '');
+        title = title.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "");
       }
 
       if (title && url) {
         results.push({
           title: title,
-          url: url.startsWith('http') ? url : `https://${url}`
+          url: url.startsWith("http") ? url : `https://${url}`,
         });
         console.log(`Added result: "${title}" -> ${url}`);
       }
@@ -111,30 +115,31 @@ function extractSearchResults(text: string): SearchResult[] {
   // Method 2: If no URLs found with method 1, try to identify search result patterns
   if (results.length === 0) {
     console.log("Trying alternative search result detection...");
-    
+
     // Look for lines that look like titles followed by domain-like text
     for (let i = 0; i < lines.length - 1; i++) {
       const currentLine = lines[i];
       const nextLine = lines[i + 1];
-      
+
       // Check if current line could be a title
-      const isPotentialTitle = 
-        currentLine && 
-        currentLine.length > 10 && 
+      const isPotentialTitle =
+        currentLine &&
+        currentLine.length > 10 &&
         currentLine.length < 120 &&
         !currentLine.match(/https?:\/\//) &&
         !currentLine.match(/^(Q|广告|Sponsored|相关搜索)/) &&
-        currentLine.split(' ').length >= 2; // At least 2 words
+        currentLine.split(" ").length >= 2; // At least 2 words
 
       // Check if next line could be a URL/domain
-      const isPotentialUrl = nextLine && 
-        (nextLine.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/) || 
-         nextLine.match(/(https?|www)/i));
+      const isPotentialUrl =
+        nextLine &&
+        (nextLine.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/) ||
+          nextLine.match(/(https?|www)/i));
 
       if (isPotentialTitle && isPotentialUrl) {
         let url = nextLine;
         // If it doesn't start with http, try to format it as URL
-        if (!url.startsWith('http')) {
+        if (!url.startsWith("http")) {
           const domainMatch = url.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/);
           if (domainMatch) {
             url = `https://${domainMatch[0]}`;
@@ -143,7 +148,7 @@ function extractSearchResults(text: string): SearchResult[] {
 
         results.push({
           title: currentLine,
-          url: url
+          url: url,
         });
         console.log(`Alternative result: "${currentLine}" -> ${url}`);
       }
@@ -151,10 +156,10 @@ function extractSearchResults(text: string): SearchResult[] {
   }
 
   // Remove duplicates
-  const uniqueResults = results.filter((result, index, self) =>
-    index === self.findIndex((r) => 
-      r.title === result.title && r.url === result.url
-    )
+  const uniqueResults = results.filter(
+    (result, index, self) =>
+      index ===
+      self.findIndex((r) => r.title === result.title && r.url === result.url)
   );
 
   console.log(`Final results: ${uniqueResults.length} unique results found`);
@@ -163,21 +168,21 @@ function extractSearchResults(text: string): SearchResult[] {
 
 function cleanText(text: string): string {
   return text
-    .split('\n')
-    .map(line => 
+    .split("\n")
+    .map((line) =>
       line
         // Remove Q characters and numbering
-        .replace(/^Q[ ,、]?\s*\d*[.:]?\s*/g, '')
+        .replace(/^Q[ ,、]?\s*\d*[.:]?\s*/g, "")
         // Remove common OCR artifacts
-        .replace(/[●•▪▫○◙◘►▼▲]/g, '')
+        .replace(/[●•▪▫○◙◘►▼▲]/g, "")
         // Remove excessive punctuation
-        .replace(/[!?]{2,}/g, '')
+        .replace(/[!?]{2,}/g, "")
         // Normalize spaces
-        .replace(/\s+/g, ' ')
+        .replace(/\s+/g, " ")
         .trim()
     )
-    .filter(line => line.length > 0)
-    .join('\n');
+    .filter((line) => line.length > 0)
+    .join("\n");
 }
 
 export default async function handler(
@@ -247,7 +252,7 @@ export default async function handler(
 
     const rawText: string = result?.ParsedResults?.[0]?.ParsedText || "";
     console.log("Raw OCR text length:", rawText.length);
-    
+
     const cleanedText = cleanText(rawText);
     const searchResults = extractSearchResults(cleanedText);
 
@@ -258,7 +263,7 @@ export default async function handler(
       text: cleanedText,
       searchResults: searchResults,
       resultsCount: searchResults.length,
-      rawText: rawText // Include for debugging
+      rawText: rawText, // Include for debugging
     });
   } catch (error: unknown) {
     console.error("OCR API Error:", error);
