@@ -158,6 +158,75 @@ export default function FullPageExtractor() {
   //   }
   // };
   // In your handleUpload function, ensure you're calling the right endpoint:
+  // const handleUpload = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (files.length === 0) return;
+
+  //   setResults([]);
+  //   setProcessing(true);
+
+  //   let hasError = false;
+
+  //   for (const file of files) {
+  //     const formData = new FormData();
+  //     formData.append("file", file);
+  //     formData.append("language", "jpn");
+
+  //     try {
+  //       // Make sure this matches your API route filename
+  //       const res = await fetch("/api/process-image-title", {
+  //         method: "POST",
+  //         body: formData,
+  //         // Don't set Content-Type header - let browser set it with boundary
+  //       });
+
+  //       if (!res.ok) {
+  //         throw new Error(`HTTP error! status: ${res.status}`);
+  //       }
+
+  //       const data = await res.json();
+
+  //       setResults((prev) => [
+  //         ...prev,
+  //         {
+  //           name: file.name,
+  //           text: data.status === "success" ? data.text : data.message,
+  //           searchResults: data.searchResults || [],
+  //           resultCount: data.resultsCount || 0,
+  //           status: data.status === "success" ? "success" : "error",
+  //         },
+  //       ]);
+
+  //       if (data.status === "error") {
+  //         hasError = true;
+  //       }
+  //     } catch (err) {
+  //       console.error("Upload error:", err);
+  //       setResults((prev) => [
+  //         ...prev,
+  //         {
+  //           name: file.name,
+  //           text: err instanceof Error ? err.message : "Error uploading file",
+  //           searchResults: [],
+  //           resultCount: 0,
+  //           status: "error",
+  //         },
+  //       ]);
+  //       hasError = true;
+  //     }
+  //   }
+
+  //   setProcessing(false);
+  //   setFiles([]);
+
+  //   if (hasError) {
+  //     setShowError(true);
+  //     setTimeout(() => setShowError(false), 2000);
+  //   } else {
+  //     setShowSuccess(true);
+  //     setTimeout(() => setShowSuccess(false), 2000);
+  //   }
+  // };
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length === 0) return;
@@ -173,18 +242,37 @@ export default function FullPageExtractor() {
       formData.append("language", "jpn");
 
       try {
-        // Make sure this matches your API route filename
+        console.log(`Uploading file: ${file.name}, size: ${file.size} bytes`);
+
         const res = await fetch("/api/process-image-title", {
           method: "POST",
           body: formData,
-          // Don't set Content-Type header - let browser set it with boundary
+          // Let browser set Content-Type with boundary automatically
         });
 
+        console.log(`Response status: ${res.status}`);
+
         if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
+          const errorText = await res.text();
+          console.error(
+            `HTTP error! status: ${res.status}, response:`,
+            errorText
+          );
+
+          let errorMessage = `HTTP error! status: ${res.status}`;
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            // If response is not JSON, use the text
+            errorMessage = errorText || errorMessage;
+          }
+
+          throw new Error(errorMessage);
         }
 
         const data = await res.json();
+        console.log("Upload successful:", data);
 
         setResults((prev) => [
           ...prev,
