@@ -273,6 +273,7 @@
 //   }
 // }
 // pages/api/process-image-title.ts
+// // pages/api/process-image-title.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import Busboy from "busboy";
 import fs from "fs";
@@ -327,34 +328,27 @@ async function processOCR(
 }
 
 function extractSearchResults(text: string): SearchResult[] {
-  console.log("Raw OCR text for analysis:", text);
-
+  // ... keep your existing extractSearchResults function ...
   const results: SearchResult[] = [];
   const lines = text
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 
-  console.log("Cleaned lines:", lines);
-
   // Method 1: Look for URL patterns and pair with preceding text
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-
-    // Enhanced URL detection
     const urlMatch = line.match(
       /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
     );
 
     if (urlMatch) {
       const url = urlMatch[0];
-      console.log(`Found URL: ${url} at line ${i}`);
+      let title = "";
 
       // Look for title in previous lines
-      let title = "";
       for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
         const potentialTitle = lines[j];
-        // A good title should be meaningful text, not too short/long
         if (
           potentialTitle &&
           potentialTitle.length > 5 &&
@@ -367,15 +361,12 @@ function extractSearchResults(text: string): SearchResult[] {
           !potentialTitle.includes("...")
         ) {
           title = potentialTitle;
-          console.log(`Found title: "${title}" for URL: ${url}`);
           break;
         }
       }
 
-      // If no title found in previous lines, try to extract from current line
       if (!title && line.length > url.length + 5) {
         title = line.replace(url, "").trim();
-        // Clean up title (remove special characters from start/end)
         title = title.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "");
       }
 
@@ -384,30 +375,24 @@ function extractSearchResults(text: string): SearchResult[] {
           title: title,
           url: url.startsWith("http") ? url : `https://${url}`,
         });
-        console.log(`Added result: "${title}" -> ${url}`);
       }
     }
   }
 
-  // Method 2: If no URLs found with method 1, try to identify search result patterns
+  // Method 2: Alternative detection
   if (results.length === 0) {
-    console.log("Trying alternative search result detection...");
-
-    // Look for lines that look like titles followed by domain-like text
     for (let i = 0; i < lines.length - 1; i++) {
       const currentLine = lines[i];
       const nextLine = lines[i + 1];
 
-      // Check if current line could be a title
       const isPotentialTitle =
         currentLine &&
         currentLine.length > 10 &&
         currentLine.length < 120 &&
         !currentLine.match(/https?:\/\//) &&
         !currentLine.match(/^(Q|广告|Sponsored|相关搜索)/) &&
-        currentLine.split(" ").length >= 2; // At least 2 words
+        currentLine.split(" ").length >= 2;
 
-      // Check if next line could be a URL/domain
       const isPotentialUrl =
         nextLine &&
         (nextLine.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/) ||
@@ -415,7 +400,6 @@ function extractSearchResults(text: string): SearchResult[] {
 
       if (isPotentialTitle && isPotentialUrl) {
         let url = nextLine;
-        // If it doesn't start with http, try to format it as URL
         if (!url.startsWith("http")) {
           const domainMatch = url.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/);
           if (domainMatch) {
@@ -427,20 +411,15 @@ function extractSearchResults(text: string): SearchResult[] {
           title: currentLine,
           url: url,
         });
-        console.log(`Alternative result: "${currentLine}" -> ${url}`);
       }
     }
   }
 
-  // Remove duplicates
-  const uniqueResults = results.filter(
+  return results.filter(
     (result, index, self) =>
       index ===
       self.findIndex((r) => r.title === result.title && r.url === result.url)
   );
-
-  console.log(`Final results: ${uniqueResults.length} unique results found`);
-  return uniqueResults;
 }
 
 function cleanText(text: string): string {
@@ -448,13 +427,9 @@ function cleanText(text: string): string {
     .split("\n")
     .map((line) =>
       line
-        // Remove Q characters and numbering
         .replace(/^Q[ ,、]?\s*\d*[.:]?\s*/g, "")
-        // Remove common OCR artifacts
         .replace(/[●•▪▫○◙◘►▼▲]/g, "")
-        // Remove excessive punctuation
         .replace(/[!?]{2,}/g, "")
-        // Normalize spaces
         .replace(/\s+/g, " ")
         .trim()
     )
@@ -462,24 +437,37 @@ function cleanText(text: string): string {
     .join("\n");
 }
 
-// Parse form data using busboy
 function parseForm(
   req: NextApiRequest
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<{ fields: any; fileBuffer: Buffer }> {
   return new Promise((resolve, reject) => {
-    const busboy = Busboy({ headers: req.headers });
+    const busboy = Busboy({
+      headers: req.headers,
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+      },
+    });
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const fields: any = {};
     let fileBuffer: Buffer = Buffer.alloc(0);
 
     busboy.on("field", (name, value) => {
       fields[name] = value;
+      console.log(`Field [${name}]: ${value}`);
     });
 
     busboy.on("file", (name, file, info) => {
       const { filename, encoding, mimeType } = info;
-      console.log(`Processing file: ${filename}, type: ${mimeType}`);
+      console.log(
+        `File [${name}]: ${filename}, encoding: ${encoding}, mimeType: ${mimeType}`
+      );
+
+      if (name !== "file") {
+        file.resume(); // Skip non-file fields
+        return;
+      }
 
       const chunks: Buffer[] = [];
       file.on("data", (chunk) => {
@@ -502,7 +490,6 @@ function parseForm(
       reject(error);
     });
 
-    // Handle request errors
     req.on("error", (error) => {
       console.error("Request error:", error);
       reject(error);
@@ -516,10 +503,18 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  // Only allow POST requests
   if (req.method !== "POST") {
-    return res
-      .status(405)
-      .json({ status: "error", message: "Method not allowed" });
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).json({
+      status: "error",
+      message: `Method ${req.method} Not Allowed`,
+    });
   }
 
   try {
@@ -528,9 +523,10 @@ export default async function handler(
 
     if (!fileBuffer || fileBuffer.length === 0) {
       console.error("No file buffer received");
-      return res
-        .status(400)
-        .json({ status: "error", message: "No file uploaded." });
+      return res.status(400).json({
+        status: "error",
+        message: "No file uploaded or file is empty.",
+      });
     }
 
     const language = fields.language || "jpn";
@@ -538,9 +534,27 @@ export default async function handler(
       `Processing with language: ${language}, file size: ${fileBuffer.length} bytes`
     );
 
+    // Validate file type
+    const sharpImage = sharp(fileBuffer);
+    const metadata = await sharpImage.metadata();
+    console.log(
+      `Image metadata: ${metadata.format}, ${metadata.width}x${metadata.height}`
+    );
+
+    if (
+      !metadata.format ||
+      !["jpeg", "png", "webp", "gif", "tiff"].includes(metadata.format)
+    ) {
+      return res.status(400).json({
+        status: "error",
+        message:
+          "Invalid image format. Supported formats: JPEG, PNG, WebP, GIF, TIFF",
+      });
+    }
+
     // Preprocess image
     console.log("Preprocessing image...");
-    const imageBuffer = await sharp(fileBuffer)
+    const imageBuffer = await sharpImage
       .resize({ width: MAX_SIZE, height: MAX_SIZE, fit: "inside" })
       .grayscale()
       .modulate({ brightness: 1, saturation: CONTRAST })
@@ -585,12 +599,15 @@ export default async function handler(
       text: cleanedText,
       searchResults: searchResults,
       resultsCount: searchResults.length,
-      rawText: rawText, // Include for debugging
+      rawText: rawText,
     });
   } catch (error: unknown) {
     console.error("OCR API Error:", error);
     const message: string =
       error instanceof Error ? error.message : "Unknown error";
-    return res.status(500).json({ status: "error", message });
+    return res.status(500).json({
+      status: "error",
+      message: `Server error: ${message}`,
+    });
   }
 }
