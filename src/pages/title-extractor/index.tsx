@@ -96,67 +96,137 @@ export default function FullPageExtractor() {
   //     setTimeout(() => setShowSuccess(false), 2000);
   //   }
   // };
-const handleUpload = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (files.length === 0) return;
+  // const handleUpload = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (files.length === 0) return;
 
-  setResults([]);
-  setProcessing(true);
+  //   setResults([]);
+  //   setProcessing(true);
 
-  let hasError = false;
+  //   let hasError = false;
 
-  for (const file of files) {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("language", "jpn");
+  //   for (const file of files) {
+  //     const formData = new FormData();
+  //     formData.append("file", file);
+  //     formData.append("language", "jpn");
 
-    try {
-      const res = await fetch("/api/process-image-title", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
+  //     try {
+  //       const res = await fetch("/api/process-image-title", {
+  //         method: "POST",
+  //         body: formData,
+  //       });
+  //       const data = await res.json();
 
-      setResults((prev) => [
-        ...prev,
-        {
-          name: file.name,
-          text: data.status === "success" ? data.text : data.message,
-          searchResults: data.searchResults || [],
-          resultCount: data.resultCount || 0,
-          status: data.status === "success" ? "success" : "error",
-        },
-      ]);
+  //       setResults((prev) => [
+  //         ...prev,
+  //         {
+  //           name: file.name,
+  //           text: data.status === "success" ? data.text : data.message,
+  //           searchResults: data.searchResults || [],
+  //           resultCount: data.resultCount || 0,
+  //           status: data.status === "success" ? "success" : "error",
+  //         },
+  //       ]);
 
-      if (data.status === "error") {
+  //       if (data.status === "error") {
+  //         hasError = true;
+  //       }
+  //     } catch (err) {
+  //       setResults((prev) => [
+  //         ...prev,
+  //         {
+  //           name: file.name,
+  //           text: "Error uploading file",
+  //           searchResults: [],
+  //           resultCount: 0,
+  //           status: "error"
+  //         },
+  //       ]);
+  //       hasError = true;
+  //     }
+  //   }
+
+  //   setProcessing(false);
+  //   setFiles([]);
+
+  //   if (hasError) {
+  //     setShowError(true);
+  //     setTimeout(() => setShowError(false), 2000);
+  //   } else {
+  //     setShowSuccess(true);
+  //     setTimeout(() => setShowSuccess(false), 2000);
+  //   }
+  // };
+  // In your handleUpload function, ensure you're calling the right endpoint:
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (files.length === 0) return;
+
+    setResults([]);
+    setProcessing(true);
+
+    let hasError = false;
+
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("language", "jpn");
+
+      try {
+        // Make sure this matches your API route filename
+        const res = await fetch("/api/process-image-title", {
+          method: "POST",
+          body: formData,
+          // Don't set Content-Type header - let browser set it with boundary
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        setResults((prev) => [
+          ...prev,
+          {
+            name: file.name,
+            text: data.status === "success" ? data.text : data.message,
+            searchResults: data.searchResults || [],
+            resultCount: data.resultsCount || 0,
+            status: data.status === "success" ? "success" : "error",
+          },
+        ]);
+
+        if (data.status === "error") {
+          hasError = true;
+        }
+      } catch (err) {
+        console.error("Upload error:", err);
+        setResults((prev) => [
+          ...prev,
+          {
+            name: file.name,
+            text: err instanceof Error ? err.message : "Error uploading file",
+            searchResults: [],
+            resultCount: 0,
+            status: "error",
+          },
+        ]);
         hasError = true;
       }
-    } catch (err) {
-      setResults((prev) => [
-        ...prev,
-        { 
-          name: file.name, 
-          text: "Error uploading file", 
-          searchResults: [],
-          resultCount: 0,
-          status: "error" 
-        },
-      ]);
-      hasError = true;
     }
-  }
 
-  setProcessing(false);
-  setFiles([]);
+    setProcessing(false);
+    setFiles([]);
 
-  if (hasError) {
-    setShowError(true);
-    setTimeout(() => setShowError(false), 2000);
-  } else {
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 2000);
-  }
-};
+    if (hasError) {
+      setShowError(true);
+      setTimeout(() => setShowError(false), 2000);
+    } else {
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+    }
+  };
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -457,126 +527,128 @@ const handleUpload = async (e: React.FormEvent) => {
             </section>
           )} */}
 
-{results.length > 0 && (
-  <section className="w-full bg-black/60 backdrop-blur-md rounded-xl border border-purple-500/40 shadow-2xl shadow-purple-500/30 p-6 mt-8 neon-panel">
-    <div className="flex items-center justify-between pb-4 border-b border-purple-500/40 mb-6">
-      <div className="flex items-center">
-        <div className="w-2 h-2 bg-pink-400 rounded-full mr-3 animate-pulse neon-dot"></div>
-        <h2 className="text-cyan-300 font-mono text-2xl tracking-wider glow-text">
-          EXTRACTION_RESULTS
-        </h2>
-      </div>
-      <span className="text-pink-500 text-sm font-mono tracking-wider neon-badge">
-        {results.reduce((acc, r) => acc + r.resultCount, 0)}_ITEMS_FOUND
-      </span>
-    </div>
-
-    <div className="space-y-6 max-h-96 overflow-y-auto terminal-scroll pr-2">
-      {results.map((r, idx) => (
-        <div
-          key={idx}
-          className={`bg-gradient-to-r rounded-xl p-1 border-l-4 neon-result ${
-            r.status === "error"
-              ? "from-red-500/10 to-pink-500/5 border-red-500"
-              : "from-cyan-500/10 to-purple-500/5 border-cyan-500"
-          }`}
-        >
-          <div className="bg-black/80 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3
-                className={`font-mono text-lg font-bold tracking-wider ${
-                  r.status === "error"
-                    ? "text-red-400"
-                    : "text-cyan-300"
-                }`}
-              >
-                {r.name}
-              </h3>
-              <div className="flex items-center space-x-3">
-                <span
-                  className={`text-xs font-mono tracking-wider px-2 py-1 rounded ${
-                    r.status === "error"
-                      ? "bg-red-500/20 text-red-400"
-                      : r.resultCount > 0
-                      ? "bg-green-500/20 text-green-400"
-                      : "bg-yellow-500/20 text-yellow-400"
-                  }`}
-                >
-                  {r.status === "error" 
-                    ? "ERROR" 
-                    : r.resultCount > 0 
-                    ? `${r.resultCount} LINKS`
-                    : "NO LINKS"
-                  }
+          {results.length > 0 && (
+            <section className="w-full bg-black/60 backdrop-blur-md rounded-xl border border-purple-500/40 shadow-2xl shadow-purple-500/30 p-6 mt-8 neon-panel">
+              <div className="flex items-center justify-between pb-4 border-b border-purple-500/40 mb-6">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-pink-400 rounded-full mr-3 animate-pulse neon-dot"></div>
+                  <h2 className="text-cyan-300 font-mono text-2xl tracking-wider glow-text">
+                    EXTRACTION_RESULTS
+                  </h2>
+                </div>
+                <span className="text-pink-500 text-sm font-mono tracking-wider neon-badge">
+                  {results.reduce((acc, r) => acc + r.resultCount, 0)}
+                  _ITEMS_FOUND
                 </span>
               </div>
-            </div>
-            
-            {/* Structured Search Results */}
-            {r.searchResults.length > 0 ? (
-              <div className="space-y-3">
-                <div className="text-cyan-400 text-sm font-mono mb-2">
-                  EXTRACTED_LINKS:
-                </div>
-                {r.searchResults.map((result, resultIdx) => (
+
+              <div className="space-y-6 max-h-96 overflow-y-auto terminal-scroll pr-2">
+                {results.map((r, idx) => (
                   <div
-                    key={resultIdx}
-                    className="bg-gradient-to-r from-cyan-500/5 to-purple-500/5 rounded-lg p-4 border border-cyan-500/20 hover:border-cyan-400/40 transition-all duration-300"
+                    key={idx}
+                    className={`bg-gradient-to-r rounded-xl p-1 border-l-4 neon-result ${
+                      r.status === "error"
+                        ? "from-red-500/10 to-pink-500/5 border-red-500"
+                        : "from-cyan-500/10 to-purple-500/5 border-cyan-500"
+                    }`}
                   >
-                    <div className="mb-3">
-                      <div className="text-cyan-400 text-xs font-mono tracking-wider mb-1">
-                        TITLE_{resultIdx + 1}:
-                      </div>
-                      <div className="text-cyan-200 font-mono text-sm bg-black/30 p-2 rounded">
-                        {result.title}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-cyan-400 text-xs font-mono tracking-wider mb-1">
-                        URL_{resultIdx + 1}:
-                      </div>
-                      <div className="text-cyan-300 font-mono text-sm break-all bg-black/30 p-2 rounded">
-                        <a 
-                          href={result.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="hover:text-cyan-100 hover:underline transition-colors"
+                    <div className="bg-black/80 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3
+                          className={`font-mono text-lg font-bold tracking-wider ${
+                            r.status === "error"
+                              ? "text-red-400"
+                              : "text-cyan-300"
+                          }`}
                         >
-                          {result.url}
-                        </a>
+                          {r.name}
+                        </h3>
+                        <div className="flex items-center space-x-3">
+                          <span
+                            className={`text-xs font-mono tracking-wider px-2 py-1 rounded ${
+                              r.status === "error"
+                                ? "bg-red-500/20 text-red-400"
+                                : r.resultCount > 0
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-yellow-500/20 text-yellow-400"
+                            }`}
+                          >
+                            {r.status === "error"
+                              ? "ERROR"
+                              : r.resultCount > 0
+                              ? `${r.resultCount} LINKS`
+                              : "NO LINKS"}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Structured Search Results */}
+                      {r.searchResults.length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="text-cyan-400 text-sm font-mono mb-2">
+                            EXTRACTED_LINKS:
+                          </div>
+                          {r.searchResults.map((result, resultIdx) => (
+                            <div
+                              key={resultIdx}
+                              className="bg-gradient-to-r from-cyan-500/5 to-purple-500/5 rounded-lg p-4 border border-cyan-500/20 hover:border-cyan-400/40 transition-all duration-300"
+                            >
+                              <div className="mb-3">
+                                <div className="text-cyan-400 text-xs font-mono tracking-wider mb-1">
+                                  TITLE_{resultIdx + 1}:
+                                </div>
+                                <div className="text-cyan-200 font-mono text-sm bg-black/30 p-2 rounded">
+                                  {result.title}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-cyan-400 text-xs font-mono tracking-wider mb-1">
+                                  URL_{resultIdx + 1}:
+                                </div>
+                                <div className="text-cyan-300 font-mono text-sm break-all bg-black/30 p-2 rounded">
+                                  <a
+                                    href={result.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-cyan-100 hover:underline transition-colors"
+                                  >
+                                    {result.url}
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : r.status === "success" ? (
+                        <div className="space-y-4">
+                          <div className="text-center py-2 text-yellow-400 font-mono text-sm">
+                            NO_STRUCTURED_LINKS_DETECTED
+                          </div>
+                          <div className="p-4 bg-cyan-900/20 rounded border border-cyan-500/30">
+                            <div className="text-cyan-400 text-xs font-mono mb-3 flex items-center justify-between">
+                              <span>RAW_OCR_TEXT:</span>
+                              <span className="text-cyan-600">
+                                {r.text.length} chars
+                              </span>
+                            </div>
+                            <pre className="text-cyan-200 text-sm whitespace-pre-wrap max-h-40 overflow-y-auto font-mono">
+                              {r.text}
+                            </pre>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-red-900/20 rounded border border-red-500/30">
+                          <pre className="text-red-200 font-mono text-sm">
+                            {r.text}
+                          </pre>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-            ) : r.status === "success" ? (
-              <div className="space-y-4">
-                <div className="text-center py-2 text-yellow-400 font-mono text-sm">
-                  NO_STRUCTURED_LINKS_DETECTED
-                </div>
-                <div className="p-4 bg-cyan-900/20 rounded border border-cyan-500/30">
-                  <div className="text-cyan-400 text-xs font-mono mb-3 flex items-center justify-between">
-                    <span>RAW_OCR_TEXT:</span>
-                    <span className="text-cyan-600">{r.text.length} chars</span>
-                  </div>
-                  <pre className="text-cyan-200 text-sm whitespace-pre-wrap max-h-40 overflow-y-auto font-mono">
-                    {r.text}
-                  </pre>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 bg-red-900/20 rounded border border-red-500/30">
-                <pre className="text-red-200 font-mono text-sm">
-                  {r.text}
-                </pre>
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  </section>
-)}
+            </section>
+          )}
           {/* Empty State */}
           {!processing && results.length === 0 && files.length === 0 && (
             <div className="text-center py-12 text-cyan-600 font-mono tracking-wider text-lg neon-empty">
