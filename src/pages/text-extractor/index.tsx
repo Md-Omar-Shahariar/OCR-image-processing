@@ -30,6 +30,61 @@ export default function FullPageExtractor() {
     router.push("/");
   };
 
+  // const handleUpload = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (files.length === 0) return;
+
+  //   setResults([]);
+  //   setProcessing(true);
+
+  //   let hasError = false;
+
+  //   for (const file of files) {
+  //     const formData = new FormData();
+  //     formData.append("file", file);
+  //     formData.append("language", "jpn");
+
+  //     try {
+  //       const res = await fetch("/api/process-image", {
+  //         method: "POST",
+  //         body: formData,
+  //       });
+  //       const data = await res.json();
+
+  //       setResults((prev) => [
+  //         ...prev,
+  //         {
+  //           name: file.name,
+  //           text: data.status === "success" ? data.text : data.message,
+  //           status: data.status === "success" ? "success" : "error",
+  //         },
+  //       ]);
+
+  //       if (data.status === "error") {
+  //         hasError = true;
+  //       }
+  //     } catch (err) {
+  //       setResults((prev) => [
+  //         ...prev,
+  //         { name: file.name, text: "Error uploading file", status: "error" },
+  //       ]);
+  //       hasError = true;
+  //     }
+  //   }
+
+  //   // All files processed
+  //   setProcessing(false);
+  //   setFiles([]);
+
+  //   // Show success or error popup for 2 seconds
+  //   if (hasError) {
+  //     setShowError(true);
+  //     setTimeout(() => setShowError(false), 2000);
+  //   } else {
+  //     setShowSuccess(true);
+  //     setTimeout(() => setShowSuccess(false), 2000);
+  //   }
+  // };
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length === 0) return;
@@ -45,11 +100,31 @@ export default function FullPageExtractor() {
       formData.append("language", "jpn");
 
       try {
+        console.log(`Uploading file: ${file.name}, size: ${file.size} bytes`);
+
         const res = await fetch("/api/process-image", {
           method: "POST",
           body: formData,
         });
+
+        console.log(`Response status: ${res.status}`);
+
+        if (!res.ok) {
+          // Try to get error message from response
+          let errorMessage = `HTTP error! status: ${res.status}`;
+          try {
+            const errorData = await res.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            // If response is not JSON, get text
+            const errorText = await res.text();
+            errorMessage = errorText || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+
         const data = await res.json();
+        console.log("Upload successful:", data);
 
         setResults((prev) => [
           ...prev,
@@ -64,19 +139,22 @@ export default function FullPageExtractor() {
           hasError = true;
         }
       } catch (err) {
+        console.error("Upload error:", err);
         setResults((prev) => [
           ...prev,
-          { name: file.name, text: "Error uploading file", status: "error" },
+          {
+            name: file.name,
+            text: err instanceof Error ? err.message : "Error uploading file",
+            status: "error",
+          },
         ]);
         hasError = true;
       }
     }
 
-    // All files processed
     setProcessing(false);
     setFiles([]);
 
-    // Show success or error popup for 2 seconds
     if (hasError) {
       setShowError(true);
       setTimeout(() => setShowError(false), 2000);
@@ -85,7 +163,6 @@ export default function FullPageExtractor() {
       setTimeout(() => setShowSuccess(false), 2000);
     }
   };
-
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
