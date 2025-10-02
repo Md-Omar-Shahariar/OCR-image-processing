@@ -1,13 +1,15 @@
-import formidable from "formidable";
-import fs from "fs";
+// pages/api/process-search-image.ts
+import { NextApiRequest, NextApiResponse } from "next";
+import Busboy from "busboy";
 import fetch from "node-fetch";
 import sharp from "sharp";
 import FormData from "form-data";
-import type { NextApiRequest, NextApiResponse } from "next";
-import type { IncomingMessage } from "http";
 
 export const config = {
-  api: { bodyParser: false },
+  api: {
+    bodyParser: false,
+    responseLimit: "10mb",
+  },
 };
 
 const API_KEY = process.env.OCR_SPACE_API_KEY || "";
@@ -25,11 +27,25 @@ interface OcrSpaceResponse {
   ParsedResults?: OcrSpaceParsedResult[];
 }
 
+interface ApiResponse {
+  status: "success" | "error";
+  text?: string;
+  searchResults?: SearchResult[];
+  resultsCount?: number;
+  rawText?: string;
+  message?: string;
+}
+
+interface SearchResult {
+  title: string;
+  url: string;
+}
+
 async function processOCR(
   imageBuffer: Buffer,
   language: string,
   engine: "1" | "2"
-) {
+): Promise<OcrSpaceResponse> {
   const formData = new FormData();
   formData.append("file", imageBuffer, {
     filename: "image.png",
@@ -40,13 +56,8 @@ async function processOCR(
   formData.append("OCREngine", engine);
 
   const response = await fetch(URL, { method: "POST", body: formData });
-  const result: OcrSpaceResponse = (await response.json()) as OcrSpaceResponse;
+  const result: OcrSpaceResponse = await response.json();
   return result;
-}
-
-interface SearchResult {
-  title: string;
-  url: string;
 }
 
 function extractSearchResults(text: string): SearchResult[] {
@@ -187,49 +198,117 @@ function cleanText(text: string): string {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<ApiResponse>
 ) {
+  // Set CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  // Only allow POST requests
   if (req.method !== "POST") {
-    return res
-      .status(405)
-      .json({ status: "error", message: "Method not allowed" });
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).json({
+      status: "error",
+      message: `Method ${req.method} Not Allowed`,
+    });
   }
 
   try {
-    const { fields, files } = await new Promise<{
-      fields: formidable.Fields;
-      files: formidable.Files;
+    const { fields, fileBuffer } = await new Promise<{
+      fields: { language?: string };
+      fileBuffer: Buffer;
     }>((resolve, reject) => {
-      const form = formidable();
-      form.parse(req as IncomingMessage, (err, fields, files) => {
-        if (err) reject(err);
-        else resolve({ fields, files });
+      const busboy = Busboy({
+        headers: req.headers,
+        limits: {
+          fileSize: 10 * 1024 * 1024, // 10MB limit
+        },
       });
+
+      const fields: { language?: string } = {};
+      let fileBuffer: Buffer = Buffer.alloc(0);
+
+      busboy.on("field", (name: string, value: string) => {
+        if (name === "language") {
+          fields.language = value;
+        }
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      busboy.on("file", (name: string, file: any, info: any) => {
+        const { mimeType } = info;
+
+        if (name !== "file") {
+          file.resume();
+          return;
+        }
+
+        if (!mimeType?.startsWith("image/")) {
+          reject(new Error("Invalid file type. Please upload an image."));
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        file.on("data", (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
+
+        file.on("end", () => {
+          fileBuffer = Buffer.concat(chunks);
+        });
+
+        file.on("error", (error: Error) => {
+          reject(error);
+        });
+      });
+
+      busboy.on("finish", () => {
+        resolve({ fields, fileBuffer });
+      });
+
+      busboy.on("error", (error: Error) => {
+        reject(error);
+      });
+
+      req.on("error", (error: Error) => {
+        reject(error);
+      });
+
+      req.pipe(busboy);
     });
 
-    const language: string[] = Array.isArray(fields.language)
-      ? fields.language
-      : [fields.language ?? "jpn"];
-
-    if (!files.file || !Array.isArray(files.file) || !files.file[0]) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "No file uploaded." });
+    if (!fileBuffer || fileBuffer.length === 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "No file uploaded or file is empty.",
+      });
     }
 
-    const filePath: string = files.file[0].filepath;
-    let imageBuffer: Buffer = fs.readFileSync(filePath);
+    const language = fields.language || "jpn";
 
-    // Preprocess image
-    imageBuffer = await sharp(imageBuffer)
-      .resize({ width: MAX_SIZE, height: MAX_SIZE, fit: "inside" })
-      .grayscale()
-      .modulate({ brightness: 1, saturation: CONTRAST })
-      .png()
-      .toBuffer();
+    // Preprocess image with sharp
+    let processedImageBuffer: Buffer;
+    try {
+      processedImageBuffer = await sharp(fileBuffer)
+        .resize({ width: MAX_SIZE, height: MAX_SIZE, fit: "inside" })
+        .grayscale()
+        .modulate({ brightness: 1, saturation: CONTRAST })
+        .png()
+        .toBuffer();
+    } catch (sharpError) {
+      console.error("Image processing error:", sharpError);
+      // If sharp fails, use original image buffer
+      processedImageBuffer = fileBuffer;
+    }
 
     // Try Engine 2 first
-    let result = await processOCR(imageBuffer, language[0], "2");
+    let result = await processOCR(processedImageBuffer, language, "2");
     console.log("Engine 2 response received");
 
     // If Engine 2 fails or server busy
@@ -239,7 +318,7 @@ export default async function handler(
     ) {
       console.warn("Engine 2 failed or busy. Retrying Engine 1...");
       await new Promise((r) => setTimeout(r, 1000));
-      result = await processOCR(imageBuffer, language[0], "1");
+      result = await processOCR(processedImageBuffer, language, "1");
       console.log("Engine 1 response received");
     }
 
@@ -266,9 +345,13 @@ export default async function handler(
       rawText: rawText, // Include for debugging
     });
   } catch (error: unknown) {
-    console.error("OCR API Error:", error);
-    const message: string =
-      error instanceof Error ? error.message : "Unknown error";
-    return res.status(500).json({ status: "error", message });
+    console.error("API Error:", error);
+    const message =
+      error instanceof Error ? error.message : "Unknown error occurred";
+
+    return res.status(500).json({
+      status: "error",
+      message: message,
+    });
   }
 }
