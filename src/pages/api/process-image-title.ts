@@ -439,7 +439,8 @@ function extractSearchResults(text: string): SearchResult[] {
       // Combine title and description for the full title
       let fullTitle = title;
       if (title && description) {
-        fullTitle = `${title} - ${description}`;
+        // fullTitle = `${title} - ${description}`;
+        fullTitle = `${description}`;
       } else if (description) {
         fullTitle = description; // Fallback if no title found
       }
