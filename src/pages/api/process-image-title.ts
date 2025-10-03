@@ -33,6 +33,7 @@ interface ApiResponse {
 interface SearchResult {
   title: string;
   url: string;
+  description?: string;
 }
 
 async function processOCR(
@@ -365,6 +366,215 @@ async function processOCR(
 //   console.log(`Final results: ${uniqueResults.length} unique results found`);
 //   return uniqueResults;
 // }
+// function extractSearchResults(text: string): SearchResult[] {
+//   console.log("Raw OCR text for analysis:", text);
+
+//   const results: SearchResult[] = [];
+//   const lines = text
+//     .split("\n")
+//     .map((line) => line.trim())
+//     .filter((line) => line.length > 0);
+
+//   console.log("Cleaned lines:", lines);
+
+//   // Method 1: Look for URL patterns and combine title + description
+//   for (let i = 0; i < lines.length; i++) {
+//     const line = lines[i];
+
+//     // Enhanced URL detection
+//     const urlMatch = line.match(
+//       /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
+//     );
+
+//     if (urlMatch) {
+//       const url = urlMatch[0];
+//       console.log(`Found URL: ${url} at line ${i}`);
+
+//       // Look for title in previous lines (red-marked text)
+//       let title = "";
+//       let description = "";
+
+//       // Find the title (1-3 lines before URL)
+//       for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+//         const potentialTitle = lines[j];
+
+//         if (
+//           potentialTitle &&
+//           potentialTitle.length > 3 &&
+//           potentialTitle.length < 200 &&
+//           !potentialTitle.match(/https?:\/\//) &&
+//           !potentialTitle.match(
+//             /^(Q|广告|Sponsored|相关搜索|Related|Search|时间|找到|ページ|Page|\d+)/
+//           ) &&
+//           !potentialTitle.match(/^[0-9\s\.-]+$/) &&
+//           !potentialTitle.includes("...") &&
+//           (potentialTitle.match(/[a-zA-Z]/) ||
+//             potentialTitle.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/))
+//         ) {
+//           title = potentialTitle;
+//           console.log(`Found title: "${title}"`);
+//           break;
+//         }
+//       }
+
+//       // Find the description (line after URL)
+//       if (i + 1 < lines.length) {
+//         const potentialDesc = lines[i + 1];
+//         // Description should be meaningful text, not too short
+//         if (
+//           potentialDesc &&
+//           potentialDesc.length > 10 && // Longer minimum for descriptions
+//           potentialDesc.length < 300 &&
+//           !potentialDesc.match(/https?:\/\//) &&
+//           !potentialDesc.match(
+//             /^(Q|广告|Sponsored|相关搜索|Related|Search|時間|找到|ページ|Page)/
+//           ) &&
+//           (potentialDesc.match(/[a-zA-Z]/) ||
+//             potentialDesc.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/))
+//         ) {
+//           description = potentialDesc;
+//           console.log(`Found description: "${description}"`);
+//         }
+//       }
+
+//       // Combine title and description for the full title
+//       let fullTitle = title;
+//       if (title && description) {
+//         // fullTitle = `${title} - ${description}`;
+//         fullTitle = `${description}`;
+//       } else if (description) {
+//         fullTitle = description; // Fallback if no title found
+//       }
+
+//       // Clean up the full title
+//       if (fullTitle) {
+//         fullTitle = fullTitle
+//           .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
+//           .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
+//           .trim();
+//       }
+
+//       if (fullTitle && url) {
+//         results.push({
+//           title: fullTitle,
+//           url: url.startsWith("http") ? url : `https://${url}`,
+//         });
+//         console.log(`Added result: "${fullTitle}" -> ${url}`);
+//       }
+//     }
+//   }
+
+//   // Method 2: Alternative pattern matching for search results
+//   if (results.length === 0) {
+//     console.log("Trying alternative search result detection...");
+
+//     for (let i = 0; i < lines.length - 2; i++) {
+//       const titleLine = lines[i];
+//       const urlLine = lines[i + 1];
+//       const descLine = lines[i + 2];
+
+//       // Check if this looks like a search result pattern: Title -> URL -> Description
+//       const isPotentialTitle =
+//         titleLine &&
+//         titleLine.length > 2 &&
+//         titleLine.length < 150 &&
+//         !titleLine.match(/https?:\/\//) &&
+//         !titleLine.match(/^(Q|广告|Sponsored|相关搜索|ページ|Page|\d+)/) &&
+//         (titleLine.match(/[a-zA-Z]/) ||
+//           titleLine.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/));
+
+//       const isPotentialUrl =
+//         urlLine &&
+//         (urlLine.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/) ||
+//           urlLine.match(/(https?|www)/i));
+
+//       const isPotentialDesc =
+//         descLine &&
+//         descLine.length > 10 &&
+//         descLine.length < 300 &&
+//         !descLine.match(/https?:\/\//) &&
+//         !descLine.match(/^(Q|广告|Sponsored|相关搜索|Related|Search)/);
+
+//       if (isPotentialTitle && isPotentialUrl && isPotentialDesc) {
+//         let url = urlLine;
+//         if (!url.startsWith("http")) {
+//           const domainMatch = url.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/);
+//           if (domainMatch) {
+//             url = `https://${domainMatch[0]}`;
+//           }
+//         }
+
+//         const fullTitle = `${titleLine} - ${descLine}`
+//           .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
+//           .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
+//           .trim();
+
+//         if (fullTitle && url) {
+//           results.push({
+//             title: fullTitle,
+//             url: url,
+//           });
+//           console.log(`Alternative result: "${fullTitle}" -> ${url}`);
+//         }
+//       }
+//     }
+//   }
+
+//   // Method 3: Handle cases where URL and description are in the same line
+//   for (let i = 0; i < lines.length; i++) {
+//     const line = lines[i];
+
+//     const urlMatch = line.match(
+//       /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
+//     );
+
+//     if (urlMatch) {
+//       const url = urlMatch[0];
+//       const lineWithoutUrl = line.replace(url, "").trim();
+
+//       // If the line contains both URL and substantial text, use that text as description
+//       if (lineWithoutUrl.length > 20) {
+//         // Look for title in previous lines
+//         let title = "";
+//         for (let j = i - 1; j >= Math.max(0, i - 2); j--) {
+//           const potentialTitle = lines[j];
+//           if (
+//             potentialTitle &&
+//             potentialTitle.length > 3 &&
+//             !potentialTitle.match(/https?:\/\//) &&
+//             (potentialTitle.match(/[a-zA-Z]/) ||
+//               potentialTitle.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/))
+//           ) {
+//             title = potentialTitle;
+//             break;
+//           }
+//         }
+
+//         const fullTitle = title
+//           ? `${title} - ${lineWithoutUrl}`
+//           : lineWithoutUrl;
+
+//         if (!results.some((r) => r.url === url)) {
+//           results.push({
+//             title: fullTitle,
+//             url: url.startsWith("http") ? url : `https://${url}`,
+//           });
+//           console.log(`Combined line result: "${fullTitle}" -> ${url}`);
+//         }
+//       }
+//     }
+//   }
+
+//   // Remove duplicates based on URL
+//   const uniqueResults = results.filter(
+//     (result, index, self) =>
+//       index === self.findIndex((r) => r.url === result.url)
+//   );
+
+//   console.log(`Final results: ${uniqueResults.length} unique results found`);
+//   return uniqueResults;
+// }
+
 function extractSearchResults(text: string): SearchResult[] {
   console.log("Raw OCR text for analysis:", text);
 
@@ -376,7 +586,7 @@ function extractSearchResults(text: string): SearchResult[] {
 
   console.log("Cleaned lines:", lines);
 
-  // Method 1: Look for URL patterns and combine title + description
+  // Method 1: Look for URL patterns and extract complete content
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
@@ -391,12 +601,12 @@ function extractSearchResults(text: string): SearchResult[] {
 
       // Look for title in previous lines (red-marked text)
       let title = "";
-      let description = "";
+      let initialDescription = "";
+      let fullDescriptionLines: string[] = [];
 
       // Find the title (1-3 lines before URL)
       for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
         const potentialTitle = lines[j];
-
         if (
           potentialTitle &&
           potentialTitle.length > 3 &&
@@ -416,13 +626,12 @@ function extractSearchResults(text: string): SearchResult[] {
         }
       }
 
-      // Find the description (line after URL)
+      // Find the initial description (line immediately after URL)
       if (i + 1 < lines.length) {
         const potentialDesc = lines[i + 1];
-        // Description should be meaningful text, not too short
         if (
           potentialDesc &&
-          potentialDesc.length > 10 && // Longer minimum for descriptions
+          potentialDesc.length > 10 &&
           potentialDesc.length < 300 &&
           !potentialDesc.match(/https?:\/\//) &&
           !potentialDesc.match(
@@ -431,23 +640,106 @@ function extractSearchResults(text: string): SearchResult[] {
           (potentialDesc.match(/[a-zA-Z]/) ||
             potentialDesc.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/))
         ) {
-          description = potentialDesc;
-          console.log(`Found description: "${description}"`);
+          initialDescription = potentialDesc;
+          console.log(`Found initial description: "${initialDescription}"`);
         }
       }
 
-      // Combine title and description for the full title
-      let fullTitle = title;
-      if (title && description) {
-        // fullTitle = `${title} - ${description}`;
-        fullTitle = `${description}`;
-      } else if (description) {
-        fullTitle = description; // Fallback if no title found
+      // Find the FULL description content (multiple lines after initial description)
+      if (i + 2 < lines.length) {
+        const paragraphLines: string[] = [];
+
+        // Start from line after initial description
+        const startIndex = i + 2;
+
+        // If we found initial description, include it as first line
+        // if (initialDescription) {
+        //   paragraphLines.push(initialDescription);
+        // }
+
+        // Collect consecutive lines that belong to this search result
+        for (let k = startIndex; k < Math.min(lines.length, i + 15); k++) {
+          const currentLine = lines[k];
+
+          // Stop conditions for paragraph collection:
+          // 1. If we hit another URL (new search result)
+          if (currentLine.match(/(https?:\/\/|www\.)/)) {
+            break;
+          }
+
+          // 2. If line is very short and looks like a new title/separator
+          if (
+            currentLine.length < 25 &&
+            currentLine.split(/\s+/).length < 4 &&
+            !currentLine.match(/[.,!?;:]$/)
+          ) {
+            // Check if next line is a URL (indicating new result)
+            if (
+              k + 1 < lines.length &&
+              lines[k + 1].match(/(https?:\/\/|www\.)/)
+            ) {
+              break;
+            }
+          }
+
+          // 3. If line looks like the start of a new search result title
+          if (
+            currentLine.length > 10 &&
+            currentLine.length < 100 &&
+            !currentLine.match(/[.,!?;:]$/) &&
+            k + 1 < lines.length &&
+            lines[k + 1].match(/(https?:\/\/|www\.)/)
+          ) {
+            break;
+          }
+
+          // Add line to paragraph if it has content
+          if (
+            currentLine.length > 5 &&
+            !currentLine.match(/^(Q|广告|Sponsored|相关搜索|Related|Search)/)
+          ) {
+            paragraphLines.push(currentLine);
+          } else {
+            // If line is too short and doesn't look like content, stop
+            break;
+          }
+        }
+
+        fullDescriptionLines = paragraphLines;
+      } else if (initialDescription) {
+        // If no additional lines but we have initial description, use that
+        fullDescriptionLines = [initialDescription];
       }
 
-      // Clean up the full title
+      // Combine title and initial description for the title field
+      let fullTitle = title;
+      if (title && initialDescription) {
+        fullTitle = `${initialDescription}`;
+      } else if (initialDescription) {
+        fullTitle = initialDescription;
+      }
+
+      // Create the full description from all collected lines
+      let fullDescription = "";
+      if (fullDescriptionLines.length > 0) {
+        fullDescription = fullDescriptionLines.join(" ");
+        console.log(
+          `Found full description (${
+            fullDescriptionLines.length
+          } lines): "${fullDescription.substring(0, 100)}..."`
+        );
+      }
+
+      // Clean up the titles and descriptions
       if (fullTitle) {
         fullTitle = fullTitle
+          .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
+          .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
+          .trim();
+      }
+
+      if (fullDescription) {
+        fullDescription = fullDescription
           .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
           .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
           .trim();
@@ -457,110 +749,94 @@ function extractSearchResults(text: string): SearchResult[] {
         results.push({
           title: fullTitle,
           url: url.startsWith("http") ? url : `https://${url}`,
+          description: fullDescription || undefined,
         });
         console.log(`Added result: "${fullTitle}" -> ${url}`);
       }
     }
   }
 
-  // Method 2: Alternative pattern matching for search results
+  // Method 2: Alternative approach for better content grouping
   if (results.length === 0) {
-    console.log("Trying alternative search result detection...");
+    console.log("Trying alternative content grouping method...");
 
-    for (let i = 0; i < lines.length - 2; i++) {
-      const titleLine = lines[i];
-      const urlLine = lines[i + 1];
-      const descLine = lines[i + 2];
+    // Group lines by search result segments
+    const segments: Array<{
+      title: string;
+      url: string;
+      descriptionLines: string[];
+    }> = [];
+    let currentSegment: {
+      title: string;
+      url: string;
+      descriptionLines: string[];
+    } | null = null;
 
-      // Check if this looks like a search result pattern: Title -> URL -> Description
-      const isPotentialTitle =
-        titleLine &&
-        titleLine.length > 2 &&
-        titleLine.length < 150 &&
-        !titleLine.match(/https?:\/\//) &&
-        !titleLine.match(/^(Q|广告|Sponsored|相关搜索|ページ|Page|\d+)/) &&
-        (titleLine.match(/[a-zA-Z]/) ||
-          titleLine.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/));
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
 
-      const isPotentialUrl =
-        urlLine &&
-        (urlLine.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/) ||
-          urlLine.match(/(https?|www)/i));
+      // Check if this line starts a new segment (contains URL or looks like title)
+      const urlMatch = line.match(
+        /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/
+      );
+      const looksLikeTitle =
+        line.length > 10 &&
+        line.length < 150 &&
+        !line.match(/https?:\/\//) &&
+        !line.match(/[.,!?;:]$/);
 
-      const isPotentialDesc =
-        descLine &&
-        descLine.length > 10 &&
-        descLine.length < 300 &&
-        !descLine.match(/https?:\/\//) &&
-        !descLine.match(/^(Q|广告|Sponsored|相关搜索|Related|Search)/);
-
-      if (isPotentialTitle && isPotentialUrl && isPotentialDesc) {
-        let url = urlLine;
-        if (!url.startsWith("http")) {
-          const domainMatch = url.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/);
-          if (domainMatch) {
-            url = `https://${domainMatch[0]}`;
-          }
+      if (
+        urlMatch ||
+        (looksLikeTitle &&
+          i + 1 < lines.length &&
+          lines[i + 1].match(/(https?:\/\/|www\.)/))
+      ) {
+        // Save previous segment
+        if (currentSegment) {
+          segments.push(currentSegment);
         }
 
-        const fullTitle = `${titleLine} - ${descLine}`
-          .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
-          .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
-          .trim();
-
-        if (fullTitle && url) {
-          results.push({
-            title: fullTitle,
-            url: url,
-          });
-          console.log(`Alternative result: "${fullTitle}" -> ${url}`);
+        // Start new segment
+        if (urlMatch) {
+          currentSegment = {
+            title: i > 0 ? lines[i - 1] : line,
+            url: urlMatch[0],
+            descriptionLines: [],
+          };
+        } else {
+          currentSegment = {
+            title: line,
+            url: lines[i + 1],
+            descriptionLines: [],
+          };
+          i++; // Skip the URL line
         }
+      } else if (
+        currentSegment &&
+        line.length > 5 &&
+        !line.match(/https?:\/\//)
+      ) {
+        // Add to current segment's description
+        currentSegment.descriptionLines.push(line);
       }
     }
-  }
 
-  // Method 3: Handle cases where URL and description are in the same line
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    // Add the last segment
+    if (currentSegment) {
+      segments.push(currentSegment);
+    }
 
-    const urlMatch = line.match(
-      /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
-    );
+    // Convert segments to results
+    for (const segment of segments) {
+      const fullDescription = segment.descriptionLines.join(" ").trim();
 
-    if (urlMatch) {
-      const url = urlMatch[0];
-      const lineWithoutUrl = line.replace(url, "").trim();
-
-      // If the line contains both URL and substantial text, use that text as description
-      if (lineWithoutUrl.length > 20) {
-        // Look for title in previous lines
-        let title = "";
-        for (let j = i - 1; j >= Math.max(0, i - 2); j--) {
-          const potentialTitle = lines[j];
-          if (
-            potentialTitle &&
-            potentialTitle.length > 3 &&
-            !potentialTitle.match(/https?:\/\//) &&
-            (potentialTitle.match(/[a-zA-Z]/) ||
-              potentialTitle.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/))
-          ) {
-            title = potentialTitle;
-            break;
-          }
-        }
-
-        const fullTitle = title
-          ? `${title} - ${lineWithoutUrl}`
-          : lineWithoutUrl;
-
-        if (!results.some((r) => r.url === url)) {
-          results.push({
-            title: fullTitle,
-            url: url.startsWith("http") ? url : `https://${url}`,
-          });
-          console.log(`Combined line result: "${fullTitle}" -> ${url}`);
-        }
-      }
+      results.push({
+        title: segment.title,
+        url: segment.url.startsWith("http")
+          ? segment.url
+          : `https://${segment.url}`,
+        description: fullDescription || undefined,
+      });
     }
   }
 
