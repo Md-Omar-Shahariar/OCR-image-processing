@@ -65,6 +65,306 @@ async function processOCR(
   return result;
 }
 
+// function extractSearchResults(text: string): SearchResult[] {
+//   console.log("Raw OCR text for analysis:", text);
+
+//   const results: SearchResult[] = [];
+//   const lines = text
+//     .split("\n")
+//     .map((line) => line.trim())
+//     .filter((line) => line.length > 0);
+
+//   console.log("Cleaned lines:", lines);
+
+//   // Method 1: Look for URL patterns and pair with preceding text
+//   for (let i = 0; i < lines.length; i++) {
+//     const line = lines[i];
+
+//     // Enhanced URL detection
+//     const urlMatch = line.match(
+//       /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
+//     );
+
+//     if (urlMatch) {
+//       const url = urlMatch[0];
+//       console.log(`Found URL: ${url} at line ${i}`);
+
+//       // Look for title in previous lines
+//       let title = "";
+//       for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+//         const potentialTitle = lines[j];
+//         // A good title should be meaningful text, not too short/long
+//         if (
+//           potentialTitle &&
+//           potentialTitle.length > 5 &&
+//           potentialTitle.length < 150 &&
+//           !potentialTitle.match(/https?:\/\//) &&
+//           !potentialTitle.match(
+//             /^(Q|广告|Sponsored|相关搜索|Related|Search|时间|找到)/
+//           ) &&
+//           !potentialTitle.match(/^[0-9\s\.-]+$/) &&
+//           !potentialTitle.includes("...")
+//         ) {
+//           title = potentialTitle;
+//           console.log(`Found title: "${title}" for URL: ${url}`);
+//           break;
+//         }
+//       }
+
+//       // If no title found in previous lines, try to extract from current line
+//       if (!title && line.length > url.length + 5) {
+//         title = line.replace(url, "").trim();
+//         // Clean up title (remove special characters from start/end)
+//         title = title.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "");
+//       }
+
+//       if (title && url) {
+//         results.push({
+//           title: title,
+//           url: url.startsWith("http") ? url : `https://${url}`,
+//         });
+//         console.log(`Added result: "${title}" -> ${url}`);
+//       }
+//     }
+//   }
+
+//   // Method 2: If no URLs found with method 1, try to identify search result patterns
+//   if (results.length === 0) {
+//     console.log("Trying alternative search result detection...");
+
+//     // Look for lines that look like titles followed by domain-like text
+//     for (let i = 0; i < lines.length - 1; i++) {
+//       const currentLine = lines[i];
+//       const nextLine = lines[i + 1];
+
+//       // Check if current line could be a title
+//       const isPotentialTitle =
+//         currentLine &&
+//         currentLine.length > 10 &&
+//         currentLine.length < 120 &&
+//         !currentLine.match(/https?:\/\//) &&
+//         !currentLine.match(/^(Q|广告|Sponsored|相关搜索)/) &&
+//         currentLine.split(" ").length >= 2; // At least 2 words
+
+//       // Check if next line could be a URL/domain
+//       const isPotentialUrl =
+//         nextLine &&
+//         (nextLine.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/) ||
+//           nextLine.match(/(https?|www)/i));
+
+//       if (isPotentialTitle && isPotentialUrl) {
+//         let url = nextLine;
+//         // If it doesn't start with http, try to format it as URL
+//         if (!url.startsWith("http")) {
+//           const domainMatch = url.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/);
+//           if (domainMatch) {
+//             url = `https://${domainMatch[0]}`;
+//           }
+//         }
+
+//         results.push({
+//           title: currentLine,
+//           url: url,
+//         });
+//         console.log(`Alternative result: "${currentLine}" -> ${url}`);
+//       }
+//     }
+//   }
+
+//   // Remove duplicates
+//   const uniqueResults = results.filter(
+//     (result, index, self) =>
+//       index ===
+//       self.findIndex((r) => r.title === result.title && r.url === result.url)
+//   );
+
+//   console.log(`Final results: ${uniqueResults.length} unique results found`);
+//   return uniqueResults;
+// }
+// function extractSearchResults(text: string): SearchResult[] {
+//   console.log("Raw OCR text for analysis:", text);
+
+//   const results: SearchResult[] = [];
+//   const lines = text
+//     .split("\n")
+//     .map((line) => line.trim())
+//     .filter((line) => line.length > 0);
+
+//   console.log("Cleaned lines:", lines);
+
+//   // Method 1: Look for URL patterns and pair with preceding text as title
+//   for (let i = 0; i < lines.length; i++) {
+//     const line = lines[i];
+
+//     // Enhanced URL detection - match various URL formats
+//     const urlMatch = line.match(
+//       /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
+//     );
+
+//     if (urlMatch) {
+//       const url = urlMatch[0];
+//       console.log(`Found URL: ${url} at line ${i}`);
+
+//       // Look for title in previous lines (red-marked titles typically appear before URLs)
+//       let title = "";
+
+//       // Search up to 3 lines back for the title
+//       for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+//         const potentialTitle = lines[j];
+
+//         // Criteria for what constitutes a good title (red-marked text)
+//         if (
+//           potentialTitle &&
+//           potentialTitle.length > 3 && // Shorter minimum for Japanese titles
+//           potentialTitle.length < 200 &&
+//           !potentialTitle.match(/https?:\/\//) &&
+//           !potentialTitle.match(
+//             /^(Q|广告|Sponsored|相关搜索|Related|Search|时间|找到|ページ|Page|\d+)/
+//           ) &&
+//           !potentialTitle.match(/^[0-9\s\.-]+$/) &&
+//           !potentialTitle.includes("...") &&
+//           // Additional criteria for Japanese/English titles
+//           (potentialTitle.match(/[a-zA-Z]/) ||
+//             potentialTitle.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/)) // Contains letters or Japanese characters
+//         ) {
+//           title = potentialTitle;
+//           console.log(`Found title: "${title}" for URL: ${url}`);
+//           break;
+//         }
+//       }
+
+//       // If no title found in previous lines, try to extract from current line
+//       if (!title && line.length > url.length + 5) {
+//         title = line.replace(url, "").trim();
+//         // Clean up title (remove special characters from start/end)
+//         title = title.replace(
+//           /^[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+|[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+$/g,
+//           ""
+//         );
+//       }
+
+//       // Final title cleanup
+//       if (title) {
+//         // Remove common prefixes/suffixes that might be OCR artifacts
+//         title = title
+//           .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
+//           .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
+//           .trim();
+//       }
+
+//       if (title && url) {
+//         results.push({
+//           title: title,
+//           url: url.startsWith("http") ? url : `https://${url}`,
+//         });
+//         console.log(`Added result: "${title}" -> ${url}`);
+//       }
+//     }
+//   }
+
+//   // Method 2: Pattern matching for search result structure
+//   if (results.length === 0) {
+//     console.log("Trying alternative search result detection...");
+
+//     // Look for lines that look like titles followed by URL-like text
+//     for (let i = 0; i < lines.length - 1; i++) {
+//       const currentLine = lines[i];
+//       const nextLine = lines[i + 1];
+
+//       // Check if current line could be a title (red-marked)
+//       const isPotentialTitle =
+//         currentLine &&
+//         currentLine.length > 2 && // Even shorter for Japanese
+//         currentLine.length < 150 &&
+//         !currentLine.match(/https?:\/\//) &&
+//         !currentLine.match(/^(Q|广告|Sponsored|相关搜索|ページ|Page|\d+)/) &&
+//         (currentLine.match(/[a-zA-Z]/) ||
+//           currentLine.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/)) && // Contains text
+//         currentLine.split(/\s+/).length >= 1; // At least 1 "word"
+
+//       // Check if next line could be a URL/domain
+//       const isPotentialUrl =
+//         nextLine &&
+//         (nextLine.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/) ||
+//           nextLine.match(/(https?|www)/i));
+
+//       if (isPotentialTitle && isPotentialUrl) {
+//         let url = nextLine;
+//         // If it doesn't start with http, try to format it as URL
+//         if (!url.startsWith("http")) {
+//           const domainMatch = url.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/);
+//           if (domainMatch) {
+//             url = `https://${domainMatch[0]}`;
+//           }
+//         }
+
+//         const title = currentLine
+//           .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
+//           .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
+//           .trim();
+
+//         if (title && url) {
+//           results.push({
+//             title: title,
+//             url: url,
+//           });
+//           console.log(`Alternative result: "${title}" -> ${url}`);
+//         }
+//       }
+//     }
+//   }
+
+//   // Method 3: Handle Japanese-specific patterns
+//   if (results.length === 0) {
+//     console.log("Trying Japanese-specific pattern detection...");
+
+//     // Look for Japanese text patterns that indicate titles
+//     for (let i = 0; i < lines.length; i++) {
+//       const line = lines[i];
+
+//       // Check if line contains Japanese characters and looks like a title
+//       const hasJapanese = line.match(
+//         /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/
+//       );
+//       const hasUrl = line.match(
+//         /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/
+//       );
+
+//       if (hasJapanese && hasUrl) {
+//         const urlMatch = line.match(
+//           /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/
+//         );
+//         if (urlMatch) {
+//           const url = urlMatch[0];
+//           let title = line.replace(url, "").trim();
+
+//           // Clean up the title
+//           title = title
+//             .replace(/^[●•▪▫○◙◘►▼▲\s\-–—]+/, "")
+//             .replace(/[●•▪▫○◙◘►▼▲\s\-–—]+$/, "")
+//             .trim();
+
+//           if (title.length > 2) {
+//             results.push({
+//               title: title,
+//               url: url.startsWith("http") ? url : `https://${url}`,
+//             });
+//             console.log(`Japanese pattern result: "${title}" -> ${url}`);
+//           }
+//         }
+//       }
+//     }
+//   }
+
+//   // Remove duplicates based on URL (same URL = same result)
+//   const uniqueResults = results.filter(
+//     (result, index, self) =>
+//       index === self.findIndex((r) => r.url === result.url)
+//   );
+
+//   console.log(`Final results: ${uniqueResults.length} unique results found`);
+//   return uniqueResults;
+// }
 function extractSearchResults(text: string): SearchResult[] {
   console.log("Raw OCR text for analysis:", text);
 
@@ -76,7 +376,7 @@ function extractSearchResults(text: string): SearchResult[] {
 
   console.log("Cleaned lines:", lines);
 
-  // Method 1: Look for URL patterns and pair with preceding text
+  // Method 1: Look for URL patterns and combine title + description
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
@@ -89,72 +389,112 @@ function extractSearchResults(text: string): SearchResult[] {
       const url = urlMatch[0];
       console.log(`Found URL: ${url} at line ${i}`);
 
-      // Look for title in previous lines
+      // Look for title in previous lines (red-marked text)
       let title = "";
+      let description = "";
+
+      // Find the title (1-3 lines before URL)
       for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
         const potentialTitle = lines[j];
-        // A good title should be meaningful text, not too short/long
+
         if (
           potentialTitle &&
-          potentialTitle.length > 5 &&
-          potentialTitle.length < 150 &&
+          potentialTitle.length > 3 &&
+          potentialTitle.length < 200 &&
           !potentialTitle.match(/https?:\/\//) &&
           !potentialTitle.match(
-            /^(Q|广告|Sponsored|相关搜索|Related|Search|时间|找到)/
+            /^(Q|广告|Sponsored|相关搜索|Related|Search|时间|找到|ページ|Page|\d+)/
           ) &&
           !potentialTitle.match(/^[0-9\s\.-]+$/) &&
-          !potentialTitle.includes("...")
+          !potentialTitle.includes("...") &&
+          (potentialTitle.match(/[a-zA-Z]/) ||
+            potentialTitle.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/))
         ) {
           title = potentialTitle;
-          console.log(`Found title: "${title}" for URL: ${url}`);
+          console.log(`Found title: "${title}"`);
           break;
         }
       }
 
-      // If no title found in previous lines, try to extract from current line
-      if (!title && line.length > url.length + 5) {
-        title = line.replace(url, "").trim();
-        // Clean up title (remove special characters from start/end)
-        title = title.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "");
+      // Find the description (line after URL)
+      if (i + 1 < lines.length) {
+        const potentialDesc = lines[i + 1];
+        // Description should be meaningful text, not too short
+        if (
+          potentialDesc &&
+          potentialDesc.length > 10 && // Longer minimum for descriptions
+          potentialDesc.length < 300 &&
+          !potentialDesc.match(/https?:\/\//) &&
+          !potentialDesc.match(
+            /^(Q|广告|Sponsored|相关搜索|Related|Search|時間|找到|ページ|Page)/
+          ) &&
+          (potentialDesc.match(/[a-zA-Z]/) ||
+            potentialDesc.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/))
+        ) {
+          description = potentialDesc;
+          console.log(`Found description: "${description}"`);
+        }
       }
 
-      if (title && url) {
+      // Combine title and description for the full title
+      let fullTitle = title;
+      if (title && description) {
+        fullTitle = `${title} - ${description}`;
+      } else if (description) {
+        fullTitle = description; // Fallback if no title found
+      }
+
+      // Clean up the full title
+      if (fullTitle) {
+        fullTitle = fullTitle
+          .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
+          .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
+          .trim();
+      }
+
+      if (fullTitle && url) {
         results.push({
-          title: title,
+          title: fullTitle,
           url: url.startsWith("http") ? url : `https://${url}`,
         });
-        console.log(`Added result: "${title}" -> ${url}`);
+        console.log(`Added result: "${fullTitle}" -> ${url}`);
       }
     }
   }
 
-  // Method 2: If no URLs found with method 1, try to identify search result patterns
+  // Method 2: Alternative pattern matching for search results
   if (results.length === 0) {
     console.log("Trying alternative search result detection...");
 
-    // Look for lines that look like titles followed by domain-like text
-    for (let i = 0; i < lines.length - 1; i++) {
-      const currentLine = lines[i];
-      const nextLine = lines[i + 1];
+    for (let i = 0; i < lines.length - 2; i++) {
+      const titleLine = lines[i];
+      const urlLine = lines[i + 1];
+      const descLine = lines[i + 2];
 
-      // Check if current line could be a title
+      // Check if this looks like a search result pattern: Title -> URL -> Description
       const isPotentialTitle =
-        currentLine &&
-        currentLine.length > 10 &&
-        currentLine.length < 120 &&
-        !currentLine.match(/https?:\/\//) &&
-        !currentLine.match(/^(Q|广告|Sponsored|相关搜索)/) &&
-        currentLine.split(" ").length >= 2; // At least 2 words
+        titleLine &&
+        titleLine.length > 2 &&
+        titleLine.length < 150 &&
+        !titleLine.match(/https?:\/\//) &&
+        !titleLine.match(/^(Q|广告|Sponsored|相关搜索|ページ|Page|\d+)/) &&
+        (titleLine.match(/[a-zA-Z]/) ||
+          titleLine.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/));
 
-      // Check if next line could be a URL/domain
       const isPotentialUrl =
-        nextLine &&
-        (nextLine.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/) ||
-          nextLine.match(/(https?|www)/i));
+        urlLine &&
+        (urlLine.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/) ||
+          urlLine.match(/(https?|www)/i));
 
-      if (isPotentialTitle && isPotentialUrl) {
-        let url = nextLine;
-        // If it doesn't start with http, try to format it as URL
+      const isPotentialDesc =
+        descLine &&
+        descLine.length > 10 &&
+        descLine.length < 300 &&
+        !descLine.match(/https?:\/\//) &&
+        !descLine.match(/^(Q|广告|Sponsored|相关搜索|Related|Search)/);
+
+      if (isPotentialTitle && isPotentialUrl && isPotentialDesc) {
+        let url = urlLine;
         if (!url.startsWith("http")) {
           const domainMatch = url.match(/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/);
           if (domainMatch) {
@@ -162,26 +502,76 @@ function extractSearchResults(text: string): SearchResult[] {
           }
         }
 
-        results.push({
-          title: currentLine,
-          url: url,
-        });
-        console.log(`Alternative result: "${currentLine}" -> ${url}`);
+        const fullTitle = `${titleLine} - ${descLine}`
+          .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
+          .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
+          .trim();
+
+        if (fullTitle && url) {
+          results.push({
+            title: fullTitle,
+            url: url,
+          });
+          console.log(`Alternative result: "${fullTitle}" -> ${url}`);
+        }
       }
     }
   }
 
-  // Remove duplicates
+  // Method 3: Handle cases where URL and description are in the same line
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    const urlMatch = line.match(
+      /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
+    );
+
+    if (urlMatch) {
+      const url = urlMatch[0];
+      const lineWithoutUrl = line.replace(url, "").trim();
+
+      // If the line contains both URL and substantial text, use that text as description
+      if (lineWithoutUrl.length > 20) {
+        // Look for title in previous lines
+        let title = "";
+        for (let j = i - 1; j >= Math.max(0, i - 2); j--) {
+          const potentialTitle = lines[j];
+          if (
+            potentialTitle &&
+            potentialTitle.length > 3 &&
+            !potentialTitle.match(/https?:\/\//) &&
+            (potentialTitle.match(/[a-zA-Z]/) ||
+              potentialTitle.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/))
+          ) {
+            title = potentialTitle;
+            break;
+          }
+        }
+
+        const fullTitle = title
+          ? `${title} - ${lineWithoutUrl}`
+          : lineWithoutUrl;
+
+        if (!results.some((r) => r.url === url)) {
+          results.push({
+            title: fullTitle,
+            url: url.startsWith("http") ? url : `https://${url}`,
+          });
+          console.log(`Combined line result: "${fullTitle}" -> ${url}`);
+        }
+      }
+    }
+  }
+
+  // Remove duplicates based on URL
   const uniqueResults = results.filter(
     (result, index, self) =>
-      index ===
-      self.findIndex((r) => r.title === result.title && r.url === result.url)
+      index === self.findIndex((r) => r.url === result.url)
   );
 
   console.log(`Final results: ${uniqueResults.length} unique results found`);
   return uniqueResults;
 }
-
 function cleanText(text: string): string {
   return text
     .split("\n")
