@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from "react";
 interface SearchResult {
   title: string;
   url: string;
+  description?: string;
 }
 
 interface FileResult {
@@ -544,6 +545,14 @@ export default function FullPageExtractor() {
                                   >
                                     {result.url}
                                   </a>
+                                </div>
+                              </div>
+                              <div className="mb-3">
+                                <div className="text-cyan-400 text-xs font-mono tracking-wider mb-1">
+                                  Description_{resultIdx + 1}:
+                                </div>
+                                <div className="text-cyan-200 font-mono text-sm bg-black/30 p-2 rounded">
+                                  {result.description}
                                 </div>
                               </div>
                             </div>
