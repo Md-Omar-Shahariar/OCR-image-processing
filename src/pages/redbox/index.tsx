@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 import { createWorker } from "tesseract.js";
+import { withAuth } from "../../components/withAuth";
 
 // Type definitions
 interface Box {
@@ -28,7 +29,7 @@ declare global {
   }
 }
 
-export default function RedBoxOCR() {
+function RedBoxScanner() {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [results, setResults] = useState<OCRResult[]>([]);
@@ -921,3 +922,5 @@ export default function RedBoxOCR() {
     </main>
   );
 }
+
+export default withAuth(RedBoxScanner);

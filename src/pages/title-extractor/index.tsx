@@ -1,5 +1,6 @@
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
+import { withAuth } from "../../components/withAuth";
 
 // interface FileResult {
 //   name: string;
@@ -19,7 +20,7 @@ interface FileResult {
   resultCount: number;
   status: "success" | "error";
 }
-export default function FullPageExtractor() {
+function TitleExtractor() {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
   const [results, setResults] = useState<FileResult[]>([]);
@@ -934,3 +935,5 @@ export default function FullPageExtractor() {
     </main>
   );
 }
+
+export default withAuth(TitleExtractor);
