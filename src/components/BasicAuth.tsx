@@ -22,9 +22,19 @@ export default function BasicAuth({ children }: BasicAuthProps) {
     setIsChecking(false);
   };
 
+  //   const handleLogin = (username: string, password: string) => {
+  //     if (username === "knowledge" && password === "testPass123") {
+  //       sessionStorage.setItem("Access", "Authenticated");
+  //       setIsAuthenticated(true);
+  //       return true;
+  //     }
+  //     return false;
+  //   };
   const handleLogin = (username: string, password: string) => {
     if (username === "knowledge" && password === "testPass123") {
       sessionStorage.setItem("Access", "Authenticated");
+
+      document.cookie = `Access=Authenticated; path=/; max-age=86400`; // 24 hours
       setIsAuthenticated(true);
       return true;
     }
