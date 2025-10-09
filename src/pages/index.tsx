@@ -1,10 +1,10 @@
 // components/HomePage.tsx
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import BasicAuth from "../components/BasicAuth";
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter();
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
@@ -105,7 +105,7 @@ export default function HomePage() {
           >
             {/* Golden gradient glow effect */}
             <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-400 via-orange-500 to-amber-500 rounded-xl blur opacity-40 group-hover:opacity-80 transition duration-300"></div>
-            
+
             {/* Main card with golden border */}
             <div className="relative bg-gray-800 rounded-xl p-8 border-2 border-amber-500/40 hover:border-amber-400/70 transition-all duration-300 h-full backdrop-blur-sm">
               {/* Decorative corner accents */}
@@ -113,7 +113,7 @@ export default function HomePage() {
               <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-amber-400 rounded-tr-xl"></div>
               <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-amber-400 rounded-bl-xl"></div>
               <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-amber-400 rounded-br-xl"></div>
-              
+
               <div className="text-center relative z-10">
                 {/* Golden icon with sparkle effect */}
                 <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-amber-500/30 relative">
@@ -141,16 +141,25 @@ export default function HomePage() {
                 </h3>
 
                 <p className="text-gray-300 text-sm leading-relaxed mb-6 group-hover:text-gray-200 transition-colors">
-                  Advanced AI-powered title and URL extraction from search result screenshots. 
-                  Automatically detects and structures titles with their corresponding URLs.
+                  Advanced AI-powered title and URL extraction from search
+                  result screenshots. Automatically detects and structures
+                  titles with their corresponding URLs.
                 </p>
 
                 {/* Feature list with golden accents */}
                 <div className="space-y-2 text-xs">
-                  <div className="text-amber-500 group-hover:text-amber-400 transition-colors">• SMART_TITLE_DETECTION</div>
-                  <div className="text-yellow-600 group-hover:text-yellow-500 transition-colors">• URL_EXTRACTION</div>
-                  <div className="text-amber-500 group-hover:text-amber-400 transition-colors">• SEARCH_RESULT_PARSING</div>
-                  <div className="text-yellow-600 group-hover:text-yellow-500 transition-colors">• STRUCTURED_OUTPUT</div>
+                  <div className="text-amber-500 group-hover:text-amber-400 transition-colors">
+                    • SMART_TITLE_DETECTION
+                  </div>
+                  <div className="text-yellow-600 group-hover:text-yellow-500 transition-colors">
+                    • URL_EXTRACTION
+                  </div>
+                  <div className="text-amber-500 group-hover:text-amber-400 transition-colors">
+                    • SEARCH_RESULT_PARSING
+                  </div>
+                  <div className="text-yellow-600 group-hover:text-yellow-500 transition-colors">
+                    • STRUCTURED_OUTPUT
+                  </div>
                 </div>
               </div>
             </div>
@@ -158,7 +167,9 @@ export default function HomePage() {
             {/* Animated golden status dot */}
             <div
               className={`absolute top-4 right-4 w-3 h-3 bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full animate-pulse ${
-                hoveredButton === "title" ? "opacity-100 scale-125" : "opacity-60"
+                hoveredButton === "title"
+                  ? "opacity-100 scale-125"
+                  : "opacity-60"
               } transition-all duration-300`}
             ></div>
 
@@ -328,5 +339,13 @@ export default function HomePage() {
         }
       `}</style>
     </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <BasicAuth>
+      <HomePageContent />
+    </BasicAuth>
   );
 }
