@@ -129,7 +129,7 @@ function AuthPopup({ onLogin }: AuthPopupProps) {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        {/* <div className="mt-6 text-center">
           <div className="text-xs text-gray-500 space-y-1">
             <div>DEMO_CREDENTIALS</div>
             <div>
@@ -139,7 +139,7 @@ function AuthPopup({ onLogin }: AuthPopupProps) {
               Password: <span className="text-cyan-400">testPass123</span>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
