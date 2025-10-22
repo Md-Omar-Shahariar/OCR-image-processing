@@ -1,7 +1,22 @@
 // pages/api/process-image-title.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import Busboy from "busboy";
+import sharp from "sharp";
 
+async function preprocessImage(imageBuffer: Buffer): Promise<Buffer> {
+  try {
+    return await sharp(imageBuffer)
+      .grayscale() // Convert to grayscale
+      .normalize() // Enhance contrast
+      .sharpen() // Sharpen edges
+      .median(3) // Reduce noise
+      .threshold(128) // Binarize for better text recognition
+      .toBuffer();
+  } catch (error) {
+    console.warn("Image preprocessing failed, using original:", error);
+    return imageBuffer;
+  }
+}
 export const config = {
   api: {
     bodyParser: false,
@@ -42,6 +57,7 @@ async function processOCR(
   engine: "1" | "2"
 ): Promise<OcrSpaceResponse> {
   // Convert to base64 for OCR.space API
+
   const base64Image = imageBuffer.toString("base64");
 
   const formData = new FormData();
