@@ -1,40 +1,14 @@
 // pages/api/process-image-title.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import Busboy from "busboy";
-
+import { ApiResponse, OcrSpaceResponse, SearchResult } from "@/types/type";
 export const config = {
   api: {
     bodyParser: false,
     responseLimit: "10mb",
   },
 };
-
 const API_KEY = process.env.OCR_SPACE_API_KEY || "";
-
-interface OcrSpaceParsedResult {
-  ParsedText?: string;
-}
-
-interface OcrSpaceResponse {
-  IsErroredOnProcessing?: boolean;
-  ErrorMessage?: string[];
-  ParsedResults?: OcrSpaceParsedResult[];
-}
-
-interface ApiResponse {
-  status: "success" | "error";
-  text?: string;
-  searchResults?: SearchResult[];
-  resultsCount?: number;
-  rawText?: string;
-  message?: string;
-}
-
-interface SearchResult {
-  title: string;
-  url: string;
-  description?: string;
-}
 
 async function processOCR(
   imageBuffer: Buffer,
@@ -42,6 +16,7 @@ async function processOCR(
   engine: "1" | "2"
 ): Promise<OcrSpaceResponse> {
   // Convert to base64 for OCR.space API
+
   const base64Image = imageBuffer.toString("base64");
 
   const formData = new FormData();
@@ -1680,6 +1655,28 @@ async function processOCR(
 //   console.log(`Final results: ${uniqueResults.length} unique results found`);
 //   return results;
 // }
+function extractCleanUrls(line: string): string[] {
+  const urlRegex =
+    /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi;
+  const matches = line.match(urlRegex) || [];
+
+  return matches.filter((url) => {
+    const index = line.indexOf(url);
+    if (index === 0) return true; // Start of line
+
+    const charBefore = line[index - 1];
+
+    // Allow if preceded by whitespace AND no non-whitespace before that
+    if (/\s/.test(charBefore)) {
+      // Check if there's any non-whitespace character before this whitespace
+      const beforeWhitespace = line.substring(0, index - 1);
+      return !beforeWhitespace.trim(); // Only allow if only whitespace before
+    }
+
+    // Allow if immediately after special character (no whitespace)
+    return /[^\w\s]/.test(charBefore);
+  });
+}
 function extractSearchResults(text: string): SearchResult[] {
   console.log("Raw OCR text for analysis:", text);
 
@@ -1690,17 +1687,59 @@ function extractSearchResults(text: string): SearchResult[] {
     .filter((line) => line.length > 0);
 
   console.log("Cleaned lines:", lines);
-
+  let flag = false;
   // Look for URL patterns and extract title + description
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
     // Enhanced URL detection
+    console.log(line, "Line.............................");
     const urlMatch = line.match(
       /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
     );
-
     if (urlMatch) {
+      const find = line.split(" ");
+      const findIndex = find.findIndex((part) => {
+        return part.includes(urlMatch[0]);
+      });
+      if (findIndex > 0) {
+        flag = false;
+      } else {
+        flag = true;
+      }
+      console.log(findIndex, "Index");
+      console.log(find, "find'''''''''''''''''''");
+    }
+
+    // const urlMatch = extractCleanUrls(line);
+    // if (urlMatch && find !== null ) {
+    //   const textBeforeUrl = line.substring(0, find);
+
+    //   // Check if there are ANY characters that are NOT spaces
+    //   const hasAnyNonSpaceCharacters = /[^\s]/.test(textBeforeUrl);
+
+    //   console.log(`Text before URL: "${textBeforeUrl}"`);
+    //   console.log(`Has any non-space characters: ${hasAnyNonSpaceCharacters}`);
+    //   console.log(
+    //     `Characters before:`,
+    //     Array.from(textBeforeUrl).map((c) =>
+    //       c === " " ? "[space]" : c === "\t" ? "[tab]" : c
+    //     )
+    //   );
+
+    //   // Only proceed if ONLY spaces (or nothing) before the URL
+    //   if (!hasAnyNonSpaceCharacters) {
+    //     const url = urlMatch[0];
+    //     flag = true;
+    //     console.log(`✅ Valid URL: ${url}`);
+    //     // Continue with your processing...
+    //   } else {
+    //     console.log(`❌ Rejected: Non-space characters found before URL`);
+    //   }
+    // }
+
+    if (urlMatch && flag) {
+      console.log(urlMatch, "MATCH........................");
       const url = urlMatch[0];
       console.log(`Found URL: ${url} at line ${i}`);
 
@@ -1717,7 +1756,8 @@ function extractSearchResults(text: string): SearchResult[] {
           potentialTitle.length > 2 && // Shorter minimum for Japanese
           potentialTitle.length < 300 && // Longer maximum for Japanese titles
           !potentialTitle.match(/https?:\/\//) && // Only exclude URLs
-          !potentialTitle.match(/^[0-9\s\.-]+$/) // Exclude pure numbers
+          !potentialTitle.match(/^[0-9\s\.-]+$/) && // Exclude pure numbers
+          flag
         ) {
           title = potentialTitle;
           console.log(`Found title: "${title}"`);
