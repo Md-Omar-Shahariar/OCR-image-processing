@@ -1,22 +1,31 @@
-// pages/api/process-image-title.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import Busboy from "busboy";
 import { ApiResponse, OcrSpaceResponse, SearchResult } from "@/types/type";
+
 export const config = {
   api: {
     bodyParser: false,
     responseLimit: "10mb",
   },
 };
+
 const API_KEY = process.env.OCR_SPACE_API_KEY || "";
+
+// Configuration constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const SUPPORTED_LANGUAGES = ["jpn", "eng", "chi", "kor"];
+const DEFAULT_LANGUAGE = "jpn";
+
+interface ProcessedFile {
+  fields: { language?: string };
+  fileBuffer: Buffer;
+}
 
 async function processOCR(
   imageBuffer: Buffer,
   language: string,
   engine: "1" | "2"
 ): Promise<OcrSpaceResponse> {
-  // Convert to base64 for OCR.space API
-
   const base64Image = imageBuffer.toString("base64");
 
   const formData = new FormData();
@@ -34,7 +43,7 @@ async function processOCR(
   });
 
   if (!response.ok) {
-    throw new Error(`OCR API error: ${response.status} ${response.statusText}`);
+    throw new Error(`OCR service temporarily unavailable. Please try again.`);
   }
 
   const result: OcrSpaceResponse = await response.json();
@@ -42,7 +51,7 @@ async function processOCR(
 }
 
 function extractSearchResults(text: string): SearchResult[] {
-  console.log("Raw OCR text for analysis:", text);
+  console.log("Processing OCR text for URL extraction");
 
   const results: SearchResult[] = [];
   const lines = text
@@ -50,173 +59,117 @@ function extractSearchResults(text: string): SearchResult[] {
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 
-  console.log("Cleaned lines:", lines);
-  let flag = false;
-  // Look for URL patterns and extract title + description
+  console.log(`Analyzing ${lines.length} text lines`);
+
+  let isUrlLine = false;
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Enhanced URL detection
-    console.log(line, "Line.............................");
+    // Enhanced URL detection with validation
     const urlMatch = line.match(
       /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
     );
+
     if (urlMatch) {
-      const find = line.split(" ");
-      const findIndex = find.findIndex((part) => {
-        return part.includes(urlMatch[0]);
-      });
-      if (findIndex > 0) {
-        flag = false;
-      } else {
-        flag = true;
-      }
-      console.log(findIndex, "Index");
-      console.log(find, "find'''''''''''''''''''");
-    }
+      const lineParts = line.split(" ");
+      const urlIndex = lineParts.findIndex((part) =>
+        part.includes(urlMatch[0])
+      );
 
-    // const urlMatch = extractCleanUrls(line);
-    // if (urlMatch && find !== null ) {
-    //   const textBeforeUrl = line.substring(0, find);
+      // URL is considered valid if it appears at the beginning of the line
+      isUrlLine = urlIndex === 0;
 
-    //   // Check if there are ANY characters that are NOT spaces
-    //   const hasAnyNonSpaceCharacters = /[^\s]/.test(textBeforeUrl);
+      if (isUrlLine) {
+        const url = urlMatch[0];
+        console.log(`Detected URL: ${url}`);
 
-    //   console.log(`Text before URL: "${textBeforeUrl}"`);
-    //   console.log(`Has any non-space characters: ${hasAnyNonSpaceCharacters}`);
-    //   console.log(
-    //     `Characters before:`,
-    //     Array.from(textBeforeUrl).map((c) =>
-    //       c === " " ? "[space]" : c === "\t" ? "[tab]" : c
-    //     )
-    //   );
+        let title = "";
+        let description = "";
 
-    //   // Only proceed if ONLY spaces (or nothing) before the URL
-    //   if (!hasAnyNonSpaceCharacters) {
-    //     const url = urlMatch[0];
-    //     flag = true;
-    //     console.log(`✅ Valid URL: ${url}`);
-    //     // Continue with your processing...
-    //   } else {
-    //     console.log(`❌ Rejected: Non-space characters found before URL`);
-    //   }
-    // }
+        // Extract title from the following line
+        if (i + 1 < lines.length) {
+          const potentialTitle = lines[i + 1];
 
-    if (urlMatch && flag) {
-      console.log(urlMatch, "MATCH........................");
-      const url = urlMatch[0];
-      console.log(`Found URL: ${url} at line ${i}`);
+          // Validate potential title
+          if (
+            potentialTitle &&
+            potentialTitle.length >= 2 &&
+            potentialTitle.length < 300 &&
+            !potentialTitle.match(/https?:\/\//) &&
+            !potentialTitle.match(/^[0-9\s\.-]+$/)
+          ) {
+            title = potentialTitle;
+            console.log(`Extracted title: "${title}"`);
 
-      let title = "";
-      let description = "";
+            // Extract description from subsequent lines
+            const descriptionLines: string[] = [];
 
-      // Use the line immediately after URL as title (SIMPLIFIED LOGIC)
-      if (i + 1 < lines.length) {
-        const potentialTitle = lines[i + 1];
+            for (let j = i + 2; j <= i + 3 && j < lines.length; j++) {
+              const descLine = lines[j];
+              if (
+                descLine &&
+                descLine.length > 3 &&
+                !descLine.match(/https?:\/\//)
+              ) {
+                descriptionLines.push(descLine);
+              }
+            }
 
-        // MUCH SIMPLER TITLE DETECTION - just check it's not another URL
-        if (
-          potentialTitle &&
-          potentialTitle.length > 2 && // Shorter minimum for Japanese
-          potentialTitle.length < 300 && // Longer maximum for Japanese titles
-          !potentialTitle.match(/https?:\/\//) && // Only exclude URLs
-          !potentialTitle.match(/^[0-9\s\.-]+$/) && // Exclude pure numbers
-          flag
-        ) {
-          title = potentialTitle;
-          console.log(`Found title: "${title}"`);
-
-          // Use the next two lines after title as description
-          const descriptionLines: string[] = [];
-
-          // Get line 1 after title (i + 2)
-          if (i + 2 < lines.length) {
-            const descLine1 = lines[i + 2];
-            if (
-              descLine1 &&
-              descLine1.length > 3 &&
-              !descLine1.match(/https?:\/\//)
-            ) {
-              descriptionLines.push(descLine1);
+            if (descriptionLines.length > 0) {
+              description = descriptionLines.join(" ");
+              console.log(`Extracted description: "${description}"`);
             }
           }
-
-          // Get line 2 after title (i + 3)
-          if (i + 3 < lines.length) {
-            const descLine2 = lines[i + 3];
-            if (
-              descLine2 &&
-              descLine2.length > 3 &&
-              !descLine2.match(/https?:\/\//)
-            ) {
-              descriptionLines.push(descLine2);
-            }
-          }
-
-          // Combine the two lines into description
-          if (descriptionLines.length > 0) {
-            description = descriptionLines.join(" ");
-            console.log(
-              `Found description (${descriptionLines.length} lines): "${description}"`
-            );
-          }
-        } else {
-          console.log(
-            `Skipped potential title: "${potentialTitle}" - didn't meet criteria`
-          );
         }
-      }
 
-      // Clean up the title and description (gentle cleaning)
-      if (title) {
+        // Clean and validate extracted content
         title = title
           .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
           .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
           .trim();
-      }
 
-      if (description) {
         description = description
           .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
           .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
           .trim();
-      }
 
-      // Add result if we have title and URL
-      if (title && url) {
-        results.push({
-          title: title,
-          url: url.startsWith("http") ? url : `https://${url}`,
-          description: description || undefined,
-        });
-        console.log(`✅ Added result: "${title}" -> ${url}`);
-      } else if (url) {
-        console.log(`❌ No suitable title found for URL: ${url}`);
+        // Add to results if we have valid title and URL
+        if (title && url) {
+          const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+
+          results.push({
+            title: title,
+            url: fullUrl,
+            description: description || undefined,
+          });
+
+          console.log(`✅ Successfully processed: "${title}" -> ${fullUrl}`);
+        }
       }
     }
   }
 
-  // Remove duplicates based on URL
+  // Remove duplicate URLs
   const uniqueResults = results.filter(
     (result, index, self) =>
       index === self.findIndex((r) => r.url === result.url)
   );
 
-  console.log(`Final results: ${uniqueResults.length} unique results found`);
+  console.log(
+    `Processing complete: ${uniqueResults.length} unique results found`
+  );
   return results;
 }
+
 function cleanText(text: string): string {
   return text
     .split("\n")
     .map((line) =>
       line
-        // Remove Q characters and numbering
         .replace(/^Q[ ,、]?\s*\d*[.:]?\s*/g, "")
-        // Remove common OCR artifacts
         .replace(/[●•▪▫○◙◘►▼▲]/g, "")
-        // Remove excessive punctuation
         .replace(/[!?]{2,}/g, "")
-        // Normalize spaces
         .replace(/\s+/g, " ")
         .trim()
     )
@@ -224,52 +177,35 @@ function cleanText(text: string): string {
     .join("\n");
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
-) {
-  // Set CORS headers
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+function validateLanguage(language: string): string {
+  return SUPPORTED_LANGUAGES.includes(language) ? language : DEFAULT_LANGUAGE;
+}
 
-  // Handle preflight requests
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  // Only allow POST requests
-  if (req.method !== "POST") {
-    res.setHeader("Allow", ["POST"]);
-    return res.status(405).json({
-      status: "error",
-      message: `Method ${req.method} Not Allowed`,
+async function parseFormData(req: NextApiRequest): Promise<ProcessedFile> {
+  return new Promise<ProcessedFile>((resolve, reject) => {
+    const busboy = Busboy({
+      headers: req.headers,
+      limits: {
+        fileSize: MAX_FILE_SIZE,
+      },
     });
-  }
 
-  try {
-    const { fields, fileBuffer } = await new Promise<{
-      fields: { language?: string };
-      fileBuffer: Buffer;
-    }>((resolve, reject) => {
-      const busboy = Busboy({
-        headers: req.headers,
-        limits: {
-          fileSize: 10 * 1024 * 1024, // 10MB limit
-        },
-      });
+    const fields: { language?: string } = {};
+    let fileBuffer: Buffer = Buffer.alloc(0);
 
-      const fields: { language?: string } = {};
-      let fileBuffer: Buffer = Buffer.alloc(0);
+    busboy.on("field", (name: string, value: string) => {
+      if (name === "language") {
+        fields.language = validateLanguage(value);
+      }
+    });
 
-      busboy.on("field", (name: string, value: string) => {
-        if (name === "language") {
-          fields.language = value;
-        }
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      busboy.on("file", (name: string, file: any, info: any) => {
+    busboy.on(
+      "file",
+      (
+        name: string,
+        file: NodeJS.ReadableStream,
+        info: { mimeType: string }
+      ) => {
         const { mimeType } = info;
 
         if (name !== "file") {
@@ -278,7 +214,9 @@ export default async function handler(
         }
 
         if (!mimeType?.startsWith("image/")) {
-          reject(new Error("Invalid file type. Please upload an image."));
+          reject(
+            new Error("Please upload a valid image file (JPEG, PNG, etc.)")
+          );
           return;
         }
 
@@ -292,79 +230,148 @@ export default async function handler(
         });
 
         file.on("error", (error: Error) => {
-          reject(error);
+          reject(new Error("Error reading uploaded file"));
         });
-      });
+      }
+    );
 
-      busboy.on("finish", () => {
-        resolve({ fields, fileBuffer });
-      });
-
-      busboy.on("error", (error: Error) => {
-        reject(error);
-      });
-
-      req.on("error", (error: Error) => {
-        reject(error);
-      });
-
-      req.pipe(busboy);
+    busboy.on("finish", () => {
+      resolve({ fields, fileBuffer });
     });
+
+    busboy.on("error", (error: Error) => {
+      reject(new Error("Error processing form data"));
+    });
+
+    req.pipe(busboy);
+  });
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ApiResponse>
+) {
+  // Set CORS headers for cross-origin requests
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  // Validate request method
+  if (req.method !== "POST") {
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).json({
+      status: "error",
+      message: "Method not allowed. Please use POST.",
+    });
+  }
+
+  try {
+    console.log("Starting image processing request...");
+
+    // Parse form data
+    const { fields, fileBuffer } = await parseFormData(req);
 
     if (!fileBuffer || fileBuffer.length === 0) {
       return res.status(400).json({
         status: "error",
-        message: "No file uploaded or file is empty.",
+        message: "No image file provided. Please upload an image.",
       });
     }
 
-    const language = fields.language || "jpn";
-
-    // Try Engine 2 first (no image preprocessing)
-    let result = await processOCR(fileBuffer, language, "2");
-    console.log("Engine 2 response received");
-
-    // If Engine 2 fails or server busy
-    if (
-      result?.IsErroredOnProcessing ||
-      result?.ErrorMessage?.[0]?.includes("Server busy")
-    ) {
-      console.warn("Engine 2 failed or busy. Retrying Engine 1...");
-      await new Promise((r) => setTimeout(r, 1000));
-      result = await processOCR(fileBuffer, language, "1");
-      console.log("Engine 1 response received");
+    if (fileBuffer.length > MAX_FILE_SIZE) {
+      return res.status(400).json({
+        status: "error",
+        message: "File size too large. Please upload an image under 10MB.",
+      });
     }
 
-    if (result?.IsErroredOnProcessing) {
+    const language = fields.language || DEFAULT_LANGUAGE;
+    console.log(`Processing image with language: ${language}`);
+
+    // Process with OCR Engine 2 (primary)
+    let ocrResult = await processOCR(fileBuffer, language, "2");
+    console.log("Primary OCR processing completed");
+
+    // Fallback to Engine 1 if primary fails
+    if (
+      ocrResult?.IsErroredOnProcessing ||
+      ocrResult?.ErrorMessage?.[0]?.includes("Server busy")
+    ) {
+      console.log("Primary engine unavailable, using fallback engine...");
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Rate limiting
+      ocrResult = await processOCR(fileBuffer, language, "1");
+      console.log("Fallback OCR processing completed");
+    }
+
+    // Handle OCR errors
+    if (ocrResult?.IsErroredOnProcessing) {
+      const errorMessage =
+        ocrResult?.ErrorMessage?.[0] || "OCR processing failed";
+      console.error("OCR processing error:", errorMessage);
+
       return res.status(500).json({
         status: "error",
-        message: result?.ErrorMessage?.[0] || "OCR processing error",
+        message:
+          "Unable to process image. Please try again with a clearer image.",
       });
     }
 
-    const rawText: string = result?.ParsedResults?.[0]?.ParsedText || "";
-    console.log("Raw OCR text length:", rawText.length);
+    // Extract and process text
+    const rawText: string = ocrResult?.ParsedResults?.[0]?.ParsedText || "";
+
+    if (!rawText || rawText.trim().length === 0) {
+      return res.status(400).json({
+        status: "error",
+        message:
+          "No text detected in the image. Please ensure the image contains clear text.",
+      });
+    }
+
+    console.log(`OCR extracted ${rawText.length} characters`);
 
     const cleanedText = cleanText(rawText);
     const searchResults = extractSearchResults(cleanedText);
 
-    console.log(`Processing complete: ${searchResults.length} results found`);
+    console.log(
+      `Request completed successfully: ${searchResults.length} search results extracted`
+    );
 
+    // Return successful response
     return res.status(200).json({
       status: "success",
       text: cleanedText,
       searchResults: searchResults,
       resultsCount: searchResults.length,
-      rawText: rawText, // Include for debugging
+      rawText: rawText, // Included for debugging purposes
     });
   } catch (error: unknown) {
-    console.error("API Error:", error);
-    const message =
-      error instanceof Error ? error.message : "Unknown error occurred";
+    console.error("Image processing error:", error);
+
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "An unexpected error occurred while processing your image.";
+
+    // User-friendly error messages
+    let userMessage = errorMessage;
+    if (errorMessage.includes("temporarily unavailable")) {
+      userMessage =
+        "Service temporarily unavailable. Please try again shortly.";
+    } else if (errorMessage.includes("valid image file")) {
+      userMessage =
+        "Invalid file type. Please upload a supported image format (JPEG, PNG, etc.).";
+    } else if (errorMessage.includes("reading uploaded file")) {
+      userMessage = "Error reading uploaded file. Please try again.";
+    }
 
     return res.status(500).json({
       status: "error",
-      message: message,
+      message: userMessage,
     });
   }
 }
