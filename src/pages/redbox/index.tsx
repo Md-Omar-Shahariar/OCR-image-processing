@@ -1,5 +1,3 @@
-// components/RedBoxOCR.tsx
-
 import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 import { createWorker } from "tesseract.js";
@@ -34,35 +32,46 @@ function RedBoxScanner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [results, setResults] = useState<OCRResult[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [status, setStatus] = useState<string>("SYSTEM_READY");
+  const [status, setStatus] = useState<string>("Ready to scan images");
   const [originalImage, setOriginalImage] = useState<string | null>(null);
-  const [scanLinePosition, setScanLinePosition] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const goHome = () => {
     router.push("/");
   };
 
-  // Animated scan line effect
+  // Simulate upload progress
   useEffect(() => {
-    const interval = setInterval(() => {
-      setScanLinePosition((prev) => (prev + 10) % 100);
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
+    let progressInterval: NodeJS.Timeout;
+    if (isProcessing) {
+      setUploadProgress(0);
+      progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+    } else {
+      setUploadProgress(100);
+      setTimeout(() => setUploadProgress(0), 1000);
+    }
+    return () => clearInterval(progressInterval);
+  }, [isProcessing]);
 
-  // Load OpenCV dynamically - FIXED VERSION
+  // Load OpenCV dynamically
   useEffect(() => {
     const loadOpenCV = async (): Promise<void> => {
-      // Check if OpenCV is already loaded
       if (typeof window !== "undefined" && window.cv && window.isOpenCVLoaded) {
-        setStatus("OPENCV_LOADED");
+        setStatus("Computer vision engine ready");
         return;
       }
 
-      // Check if OpenCV is currently loading
       if (window.isOpenCVLoading) {
-        setStatus("OPENCV_LOADING_IN_PROGRESS");
-        // Wait for loading to complete
+        setStatus("Loading computer vision engine...");
         await new Promise<void>((resolve) => {
           const checkLoaded = () => {
             if (window.isOpenCVLoaded) {
@@ -77,21 +86,19 @@ function RedBoxScanner() {
       }
 
       try {
-        setStatus("LOADING_OPENCV...");
+        setStatus("Initializing computer vision...");
         window.isOpenCVLoading = true;
 
         await new Promise<void>((resolve, reject) => {
-          // Check if script is already added
           const existingScript = document.querySelector(
             'script[src*="opencv.js"]'
           );
           if (existingScript) {
-            // Script already exists, wait for it to load
             const checkCV = () => {
               if (window.cv && window.cv.Mat) {
                 window.isOpenCVLoaded = true;
                 window.isOpenCVLoading = false;
-                setStatus("OPENCV_LOADED_SUCCESS");
+                setStatus("Computer vision engine loaded");
                 resolve();
               } else {
                 setTimeout(checkCV, 100);
@@ -101,7 +108,6 @@ function RedBoxScanner() {
             return;
           }
 
-          // Create and add new script
           const script = document.createElement("script");
           script.src = "https://docs.opencv.org/4.8.0/opencv.js";
           script.async = true;
@@ -110,7 +116,7 @@ function RedBoxScanner() {
               if (window.cv && window.cv.Mat) {
                 window.isOpenCVLoaded = true;
                 window.isOpenCVLoading = false;
-                setStatus("OPENCV_LOADED_SUCCESS");
+                setStatus("Computer vision engine loaded");
                 resolve();
               } else {
                 setTimeout(checkCV, 100);
@@ -120,13 +126,13 @@ function RedBoxScanner() {
           };
           script.onerror = () => {
             window.isOpenCVLoading = false;
-            reject(new Error("Failed to load OpenCV"));
+            reject(new Error("Failed to load computer vision engine"));
           };
           document.head.appendChild(script);
         });
       } catch (error) {
         window.isOpenCVLoading = false;
-        setStatus("OPENCV_LOAD_FAILED - USING_CANVAS_MODE");
+        setStatus("Using basic detection mode");
         console.error("OpenCV loading failed:", error);
       }
     };
@@ -146,7 +152,6 @@ function RedBoxScanner() {
     const visited = new Set<string>();
     const minBoxSize = 50;
 
-    // Simple red detection
     for (let y = 0; y < height; y += 2) {
       for (let x = 0; x < width; x += 2) {
         const index = (y * width + x) * 4;
@@ -154,11 +159,9 @@ function RedBoxScanner() {
         const g = data[index + 1];
         const b = data[index + 2];
 
-        // Detect red pixels (high red, low green/blue)
         if (r > 150 && g < 100 && b < 100 && r > g + 50 && r > b + 50) {
           const pos = `${x},${y}`;
           if (!visited.has(pos)) {
-            // Flood fill to find connected red area
             const box = floodFillRed(x, y, data, width, height, visited);
             if (box.width > minBoxSize && box.height > minBoxSize) {
               redAreas.push(box);
@@ -206,7 +209,6 @@ function RedBoxScanner() {
         maxX = Math.max(maxX, x);
         maxY = Math.max(maxY, y);
 
-        // Add neighbors
         queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
       }
     }
@@ -235,7 +237,7 @@ function RedBoxScanner() {
     if (!file) return;
 
     setIsProcessing(true);
-    setStatus("PROCESSING_IMAGE...");
+    setStatus("Processing image...");
     setResults([]);
     setOriginalImage(URL.createObjectURL(file));
 
@@ -246,14 +248,14 @@ function RedBoxScanner() {
       const canvas = canvasRef.current;
       if (!canvas) {
         setIsProcessing(false);
-        setStatus("CANVAS_ERROR");
+        setStatus("Canvas error");
         return;
       }
 
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         setIsProcessing(false);
-        setStatus("CONTEXT_ERROR");
+        setStatus("Context error");
         return;
       }
 
@@ -265,9 +267,8 @@ function RedBoxScanner() {
         let redBoxes: Box[] = [];
         const texts: OCRResult[] = [];
 
-        // Wait for OpenCV to be fully loaded if it's still loading
         if (window.isOpenCVLoading && !window.isOpenCVLoaded) {
-          setStatus("WAITING_FOR_OPENCV...");
+          setStatus("Waiting for computer vision engine...");
           await new Promise<void>((resolve) => {
             const checkLoaded = () => {
               if (window.isOpenCVLoaded) {
@@ -281,9 +282,8 @@ function RedBoxScanner() {
         }
 
         if (window.cv && window.cv.Mat && window.isOpenCVLoaded) {
-          setStatus("OPENCV_DETECTION_ACTIVE");
+          setStatus("Detecting red boxes with computer vision...");
 
-          // OpenCV detection
           const src = window.cv.imread(canvas);
           const hsv = new window.cv.Mat();
 
@@ -364,7 +364,6 @@ function RedBoxScanner() {
             contour.delete();
           }
 
-          // Cleanup
           [
             src,
             hsv,
@@ -380,13 +379,12 @@ function RedBoxScanner() {
             kernel,
           ].forEach((mat) => mat && !mat.isDeleted && mat.delete());
         } else {
-          setStatus("CANVAS_DETECTION_ACTIVE");
+          setStatus("Detecting red boxes with basic detection...");
           redBoxes = detectRedBoxesWithCanvas(ctx, img.width, img.height);
         }
 
-        setStatus(`DETECTED_${redBoxes.length}_RED_BOXES - RUNNING_OCR...`);
+        setStatus(`Found ${redBoxes.length} red boxes - extracting text...`);
 
-        // Perform OCR
         const worker = await createWorker("jpn");
 
         for (let i = 0; i < redBoxes.length; i++) {
@@ -420,19 +418,14 @@ function RedBoxScanner() {
               });
             }
 
-            // Neon-style bounding boxes
-            ctx.strokeStyle = "#ff00ff";
-            ctx.lineWidth = 4;
-            ctx.shadowColor = "#ff00ff";
-            ctx.shadowBlur = 15;
+            // Draw bounding boxes
+            ctx.strokeStyle = "#ef4444";
+            ctx.lineWidth = 3;
             ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
 
-            ctx.fillStyle = "#ff00ff";
-            ctx.font = "bold 18px 'Courier New', monospace";
-            ctx.shadowColor = "#ff00ff";
-            ctx.shadowBlur = 10;
-            ctx.fillText(`BOX_${i + 1}`, rect.x, rect.y - 10);
-            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#ef4444";
+            ctx.font = "bold 16px system-ui";
+            ctx.fillText(`Box ${i + 1}`, rect.x, rect.y - 10);
           } catch (error) {
             console.error(`OCR error for box ${i + 1}:`, error);
           }
@@ -440,11 +433,11 @@ function RedBoxScanner() {
 
         await worker.terminate();
         setResults(texts);
-        setStatus(`PROCESSING_COMPLETE - FOUND_${texts.length}_TEXT_ELEMENTS`);
+        setStatus(`Complete! Extracted text from ${texts.length} boxes`);
       } catch (error) {
         console.error("Error processing image:", error);
         setStatus(
-          `ERROR: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`
+          `Error: ${error instanceof Error ? error.message : "Unknown error"}`
         );
       } finally {
         setIsProcessing(false);
@@ -454,106 +447,203 @@ function RedBoxScanner() {
 
     img.onerror = () => {
       setIsProcessing(false);
-      setStatus("IMAGE_LOAD_ERROR");
+      setStatus("Failed to load image");
     };
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
-    <main className="min-h-screen bg-black text-cyan-300 p-6 font-mono relative overflow-hidden">
-      {/* Cyberpunk Background Elements */}
-      <div className="fixed inset-0 bg-gradient-to-br from-black via-purple-900 to-blue-900 z-0"></div>
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_50%,rgba(120,119,198,0.3),rgba(255,255,255,0))] z-0"></div>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-orange-50 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute top-0 left-0 w-72 h-72 bg-red-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div className="absolute top-0 right-0 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
 
-      {/* Animated Grid */}
-      <div className="fixed inset-0 bg-grid-pattern opacity-20 z-0"></div>
-
-      {/* Moving Scan Lines */}
-      <div
-        className="fixed inset-0 z-0 opacity-10"
-        style={{
-          background: `linear-gradient(to bottom, transparent 0%, rgba(0, 255, 255, 0.8) ${scanLinePosition}%, transparent 100%)`,
-          backgroundSize: "100% 200px",
-        }}
-      ></div>
-
-      {/* Neon Orbs */}
-      <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse-slow z-0"></div>
-      <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse-slow delay-1000 z-0"></div>
-      <div className="fixed top-1/2 left-1/2 w-64 h-64 bg-purple-500/15 rounded-full blur-2xl animate-pulse-slow delay-500 z-0"></div>
-
-      {/* Binary Rain Effect */}
-      <div className="fixed inset-0 bg-binary-rain opacity-30 z-0"></div>
-
-      {/* Home Button */}
-      <button
-        onClick={goHome}
-        className="fixed top-6 left-6 z-50 bg-black/80 backdrop-blur-md text-cyan-300 px-6 py-3 rounded-lg border border-cyan-500/50 hover:border-cyan-300 transition-all duration-300 neon-glow hover:neon-glow-intense group"
-      >
-        <div className="flex items-center space-x-3">
-          <div className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse"></div>
-          <span className="font-mono text-sm tracking-wider">Home</span>
-          <div className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse delay-1000"></div>
-        </div>
-      </button>
-
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen">
-        {/* Cyberpunk Title */}
-        <div className="text-center mb-12 relative">
-          {/* Title Glow Effect */}
-          <div className="absolute -inset-8 bg-cyan-500/20 blur-2xl rounded-full animate-pulse"></div>
-
-          {/* Main Title */}
-          <h1 className="text-5xl md:text-6xl font-bold relative bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-pink-400 to-purple-400 tracking-widest neon-text">
-            <span className="text-cyan-300 drop-shadow-neon">[</span>
-            RED_BOX_SCANNER
-            <span className="text-cyan-300 drop-shadow-neon">]</span>
-          </h1>
-
-          {/* Subtitle */}
-          <div className="h-1 w-80 mx-auto mt-6 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-lg shadow-cyan-400/50"></div>
-          <p className="text-cyan-600 mt-3 text-sm font-mono tracking-wider glow-text">
-            NEON_VISION_PATTERN_RECOGNITION
-          </p>
-        </div>
-
-        {/* Main Cyberpunk Terminal */}
-        <div className="w-full max-w-7xl bg-black/60 backdrop-blur-md rounded-xl border border-cyan-500/40 shadow-2xl shadow-cyan-500/30 p-8 mb-8 relative overflow-hidden neon-terminal">
-          {/* Terminal Header */}
-          <div className="flex items-center mb-8 pb-4 border-b border-cyan-500/40 relative">
-            {/* Animated Header Glow */}
-            <div className="absolute -inset-4 bg-cyan-500/10 blur-xl rounded-lg"></div>
-
-            <div className="flex space-x-3 relative z-10">
-              <div className="w-3 h-3 bg-red-400 rounded-full neon-dot"></div>
-              <div className="w-3 h-3 bg-yellow-400 rounded-full neon-dot delay-300"></div>
-              <div className="w-3 h-3 bg-green-400 rounded-full neon-dot delay-700"></div>
-            </div>
-
-            <div className="flex-1 text-center">
-              <span className="text-cyan-300 font-mono text-lg tracking-wider glow-text">
-                CYBER_OPTICAL_CHARACTER_RECOGNITION
+      <div className="relative z-10">
+        {/* Header */}
+        <div className="max-w-7xl mx-auto px-4 pt-8 pb-4">
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={goHome}
+              className="group flex items-center space-x-3 bg-white/80 backdrop-blur-md rounded-2xl px-6 py-4 border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            >
+              <svg
+                className="w-5 h-5 text-slate-600 group-hover:text-slate-800 transition-colors"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              <span className="font-semibold text-slate-700 group-hover:text-slate-900">
+                Back to Home
               </span>
+            </button>
+
+            <div className="text-right bg-white/80 backdrop-blur-md rounded-2xl px-6 py-4 border border-white/50 shadow-lg">
+              <div className="text-lg font-bold text-slate-800">
+                Red Box Scanner
+              </div>
+              <div className="text-sm text-slate-600">
+                Advanced Computer Vision
+              </div>
             </div>
           </div>
 
-          {/* Upload Section */}
-          <div className="mb-8">
-            <label className="block text-cyan-300 font-mono text-sm mb-4 tracking-wider glow-text">
-              UPLOAD_TARGET_IMAGE:
-            </label>
+          {/* Main Card */}
+          <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden mb-8">
+            {/* Header Section */}
+            <div className="bg-gradient-to-r from-red-600 to-orange-600 p-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
 
-            <label className="relative block cursor-pointer group">
-              {/* Upload Card Glow */}
-              <div className="absolute -inset-2 bg-cyan-500/20 blur-lg rounded-2xl group-hover:bg-cyan-400/30 transition-all duration-500"></div>
+              <div className="relative z-10">
+                <h1 className="text-4xl font-bold text-white mb-4">
+                  Red Box Text Scanner
+                </h1>
+                <p className="text-red-100 text-lg max-w-2xl">
+                  Automatically detect red bounding boxes and extract text using
+                  advanced computer vision and OCR
+                </p>
+              </div>
+            </div>
 
-              <div className="relative border-2 border-dashed border-cyan-700 rounded-xl p-8 text-center group-hover:border-cyan-400 transition-all duration-300 neon-upload">
-                <div className="relative z-10">
-                  {/* Upload Icon */}
-                  <div className="w-16 h-16 mx-auto mb-4 relative">
-                    <div className="absolute inset-0 bg-cyan-400/20 rounded-full animate-ping"></div>
-                    <div className="absolute inset-2 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-full flex items-center justify-center neon-icon">
+            {/* Upload Section */}
+            <div className="p-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column - Upload Area */}
+                <div>
+                  <div className="mb-8">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-3">
+                      Upload Image
+                    </h2>
+                    <p className="text-slate-600">
+                      Upload an image containing red bounding boxes. Our AI will
+                      detect them and extract the text inside.
+                    </p>
+                  </div>
+
+                  {/* Drop Zone */}
+                  <div
+                    className={`relative border-3 border-dashed rounded-2xl p-8 text-center transition-all duration-500 cursor-pointer mb-6 group ${
+                      isProcessing
+                        ? "border-red-500 bg-red-50 scale-105"
+                        : "border-slate-300 hover:border-red-400 hover:bg-red-50"
+                    }`}
+                    onClick={triggerFileInput}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImage}
+                      disabled={isProcessing}
+                      ref={fileInputRef}
+                      className="hidden"
+                    />
+
+                    <div className="max-w-md mx-auto">
+                      <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                        <svg
+                          className="w-10 h-10 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                      </div>
+
+                      <h3 className="text-xl font-semibold text-slate-800 mb-3">
+                        {isProcessing
+                          ? "🔄 Processing image..."
+                          : "📁 Drop image here or click to browse"}
+                      </h3>
+
+                      <p className="text-slate-500 text-sm mb-4">
+                        Supports JPG, PNG, BMP • Maximum 1MB
+                      </p>
+
+                      <div className="inline-flex items-center space-x-2 bg-slate-100 rounded-full px-4 py-2">
+                        <svg
+                          className="w-4 h-4 text-slate-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <span className="text-slate-600 text-sm">
+                          Perfect for documents with red highlights
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  {isProcessing && (
+                    <div className="mb-6">
+                      <div className="flex justify-between text-sm text-slate-600 mb-2">
+                        <span>Processing image...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-3">
+                        <div
+                          className="bg-gradient-to-r from-red-500 to-orange-500 h-3 rounded-full transition-all duration-300 ease-out"
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status Display */}
+                  <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                    <div className="flex items-center space-x-4">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          isProcessing
+                            ? "bg-yellow-500 animate-pulse"
+                            : "bg-green-500"
+                        }`}
+                      ></div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">
+                          Status
+                        </div>
+                        <div className="text-slate-600 text-sm">{status}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column - Tips & Info */}
+                <div>
+                  {/* Tips Card */}
+                  <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-6 border border-red-200 mb-8">
+                    <h4 className="font-semibold text-red-800 mb-3 flex items-center space-x-2">
                       <svg
-                        className="w-8 h-8 text-black"
+                        className="w-5 h-5"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -562,179 +652,223 @@ function RedBoxScanner() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
+                      <span>Best Practices</span>
+                    </h4>
+                    <ul className="space-y-2 text-sm text-red-700">
+                      <li className="flex items-center space-x-2">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                        <span>Use clear images with distinct red boxes</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                        <span>
+                          Ensure good contrast between text and background
+                        </span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                        <span>Red boxes should be clearly visible</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                        <span>Text inside boxes should be readable</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Features Card */}
+                  <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                    <h4 className="font-semibold text-slate-800 mb-4">
+                      How It Works
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                          <span className="text-red-600 font-bold text-sm">
+                            1
+                          </span>
+                        </div>
+                        <span className="text-slate-600 text-sm">
+                          Upload your image
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                          <span className="text-orange-600 font-bold text-sm">
+                            2
+                          </span>
+                        </div>
+                        <span className="text-slate-600 text-sm">
+                          AI detects red bounding boxes
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                          <span className="text-amber-600 font-bold text-sm">
+                            3
+                          </span>
+                        </div>
+                        <span className="text-slate-600 text-sm">
+                          OCR extracts text from each box
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                          <span className="text-green-600 font-bold text-sm">
+                            4
+                          </span>
+                        </div>
+                        <span className="text-slate-600 text-sm">
+                          Get structured results
+                        </span>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="text-cyan-300 font-mono text-xl mb-2 tracking-wider">
-                    {isProcessing ? "PROCESSING..." : "DROP_ZONE_ACTIVE"}
-                  </div>
-                  <div className="text-cyan-600 text-sm font-mono tracking-wider">
-                    SUPPORTED_FORMATS: JPG/PNG/BMP
-                  </div>
                 </div>
               </div>
-
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImage}
-                disabled={isProcessing}
-                className="hidden"
-              />
-            </label>
-          </div>
-
-          {/* Status Display */}
-          <div className="mb-8">
-            <div className="bg-black/50 rounded-xl p-6 border border-cyan-500/30 relative neon-status">
-              <div className="flex items-center space-x-4">
-                <div
-                  className={`w-3 h-3 rounded-full neon-status-dot ${
-                    isProcessing
-                      ? "bg-yellow-400 animate-pulse"
-                      : "bg-green-400"
-                  }`}
-                ></div>
-                <span className="text-cyan-300 font-mono text-base tracking-wider">
-                  SYSTEM_STATUS: <span className="text-cyan-100">{status}</span>
-                </span>
-              </div>
-
-              {isProcessing && (
-                <div className="mt-4">
-                  <div className="w-full bg-cyan-900/30 rounded-full h-3 overflow-hidden">
-                    <div className="bg-gradient-to-r from-cyan-400 via-pink-400 to-purple-400 h-3 rounded-full animate-progress"></div>
-                  </div>
-                  <div className="text-cyan-500 text-xs mt-2 font-mono tracking-wider text-center">
-                    ANALYZING_IMAGE_DATA - PLEASE_STANDBY...
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Results Section - Side by Side */}
+          {/* Results Section */}
           {(originalImage || results.length > 0) && (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mt-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
               {/* Image Panel */}
-              <div className="space-y-4">
-                <div className="flex items-center pb-3 border-b border-cyan-500/40">
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full mr-3 animate-pulse neon-dot"></div>
-                  <h3 className="text-cyan-300 font-mono text-xl tracking-wider glow-text">
-                    VISUAL_ANALYSIS
-                  </h3>
+              <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6">
+                  <h2 className="text-xl font-bold text-white flex items-center space-x-3">
+                    <span>🖼️ Visual Analysis</span>
+                  </h2>
                 </div>
-
-                <div className="relative bg-black/80 rounded-xl border border-cyan-500/30 p-3 neon-panel">
+                <div className="p-6">
                   {originalImage && (
-                    <div className="relative overflow-hidden rounded-lg">
-                      <img
-                        src={originalImage}
-                        alt="Original"
-                        className="w-full h-auto rounded-lg"
-                      />
-                      <canvas
-                        ref={canvasRef}
-                        className="absolute inset-0 w-full h-full rounded-lg"
-                        style={{
-                          display: results.length > 0 ? "block" : "none",
-                        }}
-                      />
+                    <div className="relative bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                      <div className="relative overflow-hidden rounded-lg">
+                        <img
+                          src={originalImage}
+                          alt="Original"
+                          className="w-full h-auto rounded-lg shadow-sm"
+                        />
+                        <canvas
+                          ref={canvasRef}
+                          className="absolute inset-0 w-full h-full rounded-lg"
+                          style={{
+                            display: results.length > 0 ? "block" : "none",
+                          }}
+                        />
+                      </div>
+                      {results.length > 0 && (
+                        <div className="mt-4 text-center text-slate-600 text-sm">
+                          Detected {results.length} red box
+                          {results.length > 1 ? "es" : ""}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Text Results Panel */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-pink-500/40">
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-pink-400 rounded-full mr-3 animate-pulse neon-dot"></div>
-                    <h3 className="text-pink-300 font-mono text-xl tracking-wider glow-text">
-                      TEXT_EXTRACTION
-                    </h3>
+              <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
+                <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-white flex items-center space-x-3">
+                      <span>📋 Extracted Text</span>
+                    </h2>
+                    {results.length > 0 && (
+                      <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                        <span className="text-white font-semibold text-sm">
+                          {results.length} box{results.length > 1 ? "es" : ""}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  {results.length > 0 && (
-                    <span className="text-pink-500 text-sm font-mono tracking-wider neon-badge">
-                      {results.length}_ELEMENTS
-                    </span>
-                  )}
                 </div>
-
-                <div className="h-auto overflow-y-auto terminal-scroll bg-black/60 rounded-xl border border-pink-500/30 p-4 neon-panel">
+                <div className="p-6">
                   {results.length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-96 overflow-y-auto">
                       {results.map((result, index) => (
                         <div
                           key={index}
-                          className="bg-gradient-to-r from-pink-500/10 to-cyan-500/5 rounded-xl p-1 border border-pink-500/20 neon-result"
+                          className="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-red-200 transition-colors"
                         >
-                          <div className="bg-black/80 rounded-xl p-4">
-                            {/* Result Header */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-3">
-                                <div className="w-2 h-2 bg-gradient-to-r from-cyan-400 to-pink-400 rounded-full animate-pulse"></div>
-                                <span className="text-cyan-300 font-mono font-bold tracking-wider text-lg">
-                                  BOX_{index + 1}
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                                <span className="text-red-600 font-bold">
+                                  {index + 1}
                                 </span>
                               </div>
-                              {result.confidence && (
-                                <span className="text-pink-400 text-xs font-mono tracking-wider neon-confidence">
-                                  CONF: {Math.round(result.confidence)}%
-                                </span>
-                              )}
+                              <div>
+                                <h3 className="font-semibold text-slate-800">
+                                  Box {index + 1}
+                                </h3>
+                                {result.confidence && (
+                                  <div className="text-slate-500 text-sm">
+                                    Confidence: {Math.round(result.confidence)}%
+                                  </div>
+                                )}
+                              </div>
                             </div>
+                            <button
+                              onClick={() => copyToClipboard(result.text)}
+                              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <span>Copy</span>
+                            </button>
+                          </div>
 
-                            {/* Extracted Text */}
-                            <div className="bg-black/50 rounded-lg p-4 border border-cyan-500/10 mb-2">
-                              <pre className="text-cyan-200 font-mono text-base tracking-wide whitespace-pre-wrap neon-text-content">
-                                {result.text}
-                              </pre>
-                            </div>
+                          <div className="bg-white rounded-xl p-4 border border-slate-200">
+                            <pre className="text-slate-700 text-sm whitespace-pre-wrap font-sans leading-relaxed">
+                              {result.text}
+                            </pre>
+                          </div>
 
-                            {/* Position Data */}
-                            <div className="text-cyan-600 text-xs font-mono tracking-wider">
-                              COORDINATES: X{result.box.x} Y{result.box.y} |
-                              DIM: W{result.box.width} H{result.box.height}
-                            </div>
+                          <div className="mt-3 text-slate-500 text-xs">
+                            Position: X{result.box.x}, Y{result.box.y} • Size:{" "}
+                            {result.box.width}×{result.box.height}px
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="h-96 flex flex-col items-center justify-center text-cyan-600 font-mono tracking-wider">
-                      {/* Hexagonal X Mark */}
-                      <div className="relative mb-6">
-                        {/* Outer Hexagon */}
-                        <div className="w-32 h-32 bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-lg rotate-45 relative neon-hexagon">
-                          {/* Inner Hexagon */}
-                          <div className="absolute inset-4 bg-black/80 rounded-lg rotate-0"></div>
-
-                          {/* X Mark */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="relative w-full h-full">
-                              {/* Diagonal Line 1 */}
-                              <div className="absolute top-1/2 left-1/2 w-24 h-1 bg-red-400 transform -translate-x-1/2 -translate-y-1/2 rotate-45 neon-x-line"></div>
-                              {/* Diagonal Line 2 */}
-                              <div className="absolute top-1/2 left-1/2 w-24 h-1 bg-red-400 transform -translate-x-1/2 -translate-y-1/2 -rotate-45 neon-x-line"></div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Pulsing Glow Effect */}
-                        <div className="absolute inset-0 w-32 h-32 bg-red-500/30 rounded-lg rotate-45 blur-xl animate-pulse-slow -z-10"></div>
+                    <div className="h-96 flex flex-col items-center justify-center text-slate-500">
+                      <div className="w-24 h-24 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                        <svg
+                          className="w-12 h-12 text-slate-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 20c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8z"
+                          />
+                        </svg>
                       </div>
-
-                      {/* Status Text */}
-                      <div className="text-center space-y-2">
-                        <div className="text-red-400 text-xl tracking-wider neon-text">
-                          NO_TEXT_DETECTED
+                      <div className="text-center">
+                        <div className="font-semibold text-slate-600 mb-2">
+                          No red boxes detected
                         </div>
-                        <div className="text-cyan-600 text-sm">
-                          SCAN_COMPLETE - NO_RED_BOXES_FOUND
+                        <div className="text-sm">
+                          Try uploading an image with clear red bounding boxes
                         </div>
                       </div>
                     </div>
@@ -746,177 +880,96 @@ function RedBoxScanner() {
 
           {/* Empty State */}
           {!originalImage && results.length === 0 && (
-            <div className="text-center py-16 text-cyan-600 font-mono tracking-wider text-lg neon-empty">
-              UPLOAD_IMAGE_TO_INITIATE_NEON_SCAN
+            <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 p-12 text-center">
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-r from-red-100 to-orange-100 rounded-3xl flex items-center justify-center">
+                <svg
+                  className="w-12 h-12 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-800 mb-3">
+                Ready to Scan Red Boxes
+              </h3>
+              <p className="text-slate-600 text-lg mb-8 max-w-md mx-auto">
+                Upload an image with red bounding boxes to automatically detect
+                and extract text using computer vision.
+              </p>
+              <div className="inline-flex items-center space-x-2 bg-slate-100 rounded-full px-4 py-2">
+                <span className="text-slate-600">
+                  ✨ Perfect for documents, forms, and marked images
+                </span>
+              </div>
             </div>
           )}
         </div>
 
-        {/* System Footer */}
+        {/* Footer */}
+        <div className="text-center py-8">
+          <div className="inline-flex flex-wrap justify-center gap-6 bg-white/80 backdrop-blur-md rounded-2xl px-8 py-6 border border-white/50 shadow-lg">
+            <div className="flex items-center space-x-3">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <div>
+                <div className="text-sm font-semibold text-slate-800">
+                  Computer Vision
+                </div>
+                <div className="text-xs text-slate-500">Active</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <div>
+                <div className="text-sm font-semibold text-slate-800">
+                  Red Box Detection
+                </div>
+                <div className="text-xs text-slate-500">Ready</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <div>
+                <div className="text-sm font-semibold text-slate-800">
+                  OCR Engine
+                </div>
+                <div className="text-xs text-slate-500">Online</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Global Styles */}
       <style jsx global>{`
-        .bg-grid-pattern {
-          background-image: linear-gradient(
-              rgba(0, 255, 255, 0.1) 1px,
-              transparent 1px
-            ),
-            linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
-          background-size: 50px 50px;
-        }
-
-        .bg-binary-rain {
-          background: linear-gradient(
-            transparent 90%,
-            rgba(0, 255, 255, 0.1) 100%
-          );
-          background-size: 100% 10px;
-          animation: binaryRain 1s linear infinite;
-        }
-
-        @keyframes binaryRain {
+        @keyframes blob {
           0% {
-            background-position: 0 0;
+            transform: translate(0px, 0px) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
           }
           100% {
-            background-position: 0 10px;
+            transform: translate(0px, 0px) scale(1);
           }
         }
-
-        .neon-text {
-          text-shadow: 0 0 5px currentColor, 0 0 10px currentColor,
-            0 0 15px currentColor, 0 0 20px currentColor;
+        .animate-blob {
+          animation: blob 7s infinite;
         }
-
-        .glow-text {
-          text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+        .animation-delay-2000 {
+          animation-delay: 2s;
         }
-
-        .neon-glow {
-          box-shadow: 0 0 5px rgba(0, 255, 255, 0.5),
-            0 0 10px rgba(0, 255, 255, 0.3),
-            inset 0 0 10px rgba(0, 255, 255, 0.1);
-        }
-
-        .neon-glow-intense {
-          box-shadow: 0 0 15px rgba(0, 255, 255, 0.8),
-            0 0 30px rgba(0, 255, 255, 0.5),
-            inset 0 0 20px rgba(0, 255, 255, 0.2);
-        }
-
-        .neon-terminal {
-          box-shadow: 0 0 30px rgba(0, 255, 255, 0.3),
-            0 0 60px rgba(0, 255, 255, 0.1),
-            inset 0 0 30px rgba(0, 255, 255, 0.05);
-        }
-
-        .neon-upload {
-          box-shadow: 0 0 20px rgba(0, 255, 255, 0.2),
-            inset 0 0 20px rgba(0, 255, 255, 0.1);
-        }
-
-        .neon-status {
-          box-shadow: 0 0 15px rgba(0, 255, 255, 0.2),
-            inset 0 0 15px rgba(0, 255, 255, 0.1);
-        }
-
-        .neon-panel {
-          box-shadow: 0 0 20px rgba(0, 255, 255, 0.15),
-            inset 0 0 20px rgba(0, 255, 255, 0.05);
-        }
-
-        .neon-result {
-          box-shadow: 0 0 10px rgba(255, 0, 255, 0.3),
-            0 0 20px rgba(255, 0, 255, 0.1);
-        }
-
-        .neon-dot {
-          box-shadow: 0 0 10px currentColor;
-        }
-
-        .neon-icon {
-          box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
-            0 0 40px rgba(0, 255, 255, 0.3);
-        }
-
-        .neon-badge {
-          text-shadow: 0 0 5px rgba(255, 0, 255, 0.7);
-        }
-
-        .neon-confidence {
-          text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
-        }
-
-        .neon-text-content {
-          text-shadow: 0 0 3px rgba(0, 255, 255, 0.5);
-        }
-
-        .neon-empty {
-          text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-        }
-
-        .neon-hexagon {
-          box-shadow: 0 0 20px rgba(255, 0, 0, 0.5),
-            0 0 40px rgba(255, 0, 0, 0.3), inset 0 0 20px rgba(255, 0, 0, 0.2);
-        }
-
-        .neon-x-line {
-          box-shadow: 0 0 10px rgba(255, 0, 0, 0.8),
-            0 0 20px rgba(255, 0, 0, 0.5);
-        }
-
-        .terminal-scroll::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .terminal-scroll::-webkit-scrollbar-track {
-          background: rgba(0, 255, 255, 0.1);
-          border-radius: 4px;
-        }
-
-        .terminal-scroll::-webkit-scrollbar-thumb {
-          background: rgba(0, 255, 255, 0.3);
-          border-radius: 4px;
-        }
-
-        .terminal-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(0, 255, 255, 0.5);
-        }
-
-        @keyframes pulse-slow {
-          0%,
-          100% {
-            opacity: 0.3;
-          }
-          50% {
-            opacity: 1;
-          }
-        }
-
-        @keyframes progress {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
-        }
-
-        .animate-pulse-slow {
-          animation: pulse-slow 3s ease-in-out infinite;
-        }
-
-        .animate-progress {
-          animation: progress 2s ease-in-out infinite;
-        }
-
-        canvas {
-          max-width: 100%;
-          height: auto;
-          pointer-events: none;
-        }
-
-        .drop-shadow-neon {
-          filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.7));
+        .animation-delay-4000 {
+          animation-delay: 4s;
         }
       `}</style>
     </main>
