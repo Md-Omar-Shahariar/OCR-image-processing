@@ -1,6 +1,12 @@
 import { useRouter } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { withAuth } from "../../components/withAuth";
+import AppShell from "../../components/layout/AppShell";
+import PageHeaderCard from "../../components/ui/PageHeaderCard";
+import UploadDropzone from "../../components/upload/UploadDropzone";
+import FileList from "../../components/upload/FileList";
+import ProgressBar from "../../components/ui/ProgressBar";
+import Toast from "../../components/feedback/Toast";
 
 interface SearchResult {
   title: string;
@@ -21,11 +27,10 @@ function TitleExtractor() {
   const [files, setFiles] = useState<File[]>([]);
   const [results, setResults] = useState<FileResult[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   // Simulate upload progress
   useEffect(() => {
@@ -60,7 +65,6 @@ function TitleExtractor() {
     setProcessing(true);
 
     let hasError = false;
-    let successCount = 0;
 
     for (const file of files) {
       const formData = new FormData();
@@ -85,12 +89,10 @@ function TitleExtractor() {
           },
         ]);
 
-        if (data.status === "success") {
-          successCount++;
-        } else {
+        if (data.status !== "success") {
           hasError = true;
         }
-      } catch (err) {
+      } catch {
         setResults((prev) => [
           ...prev,
           {
@@ -117,36 +119,19 @@ function TitleExtractor() {
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => setIsDragging(false);
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    const imageFiles = droppedFiles.filter((file) =>
-      file.type.startsWith("image/")
-    );
-    if (imageFiles.length > 0) setFiles(imageFiles);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
-    setFiles(selectedFiles);
-  };
-
   const removeFile = (index: number) => {
     const newFiles = [...files];
     newFiles.splice(index, 1);
     setFiles(newFiles);
   };
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
+  const resetWorkspace = () => {
+    setFiles([]);
+    setResults([]);
+  };
+
+  const handleFilesChange = (selectedFiles: File[]) => {
+    setFiles(selectedFiles);
   };
 
   const copyToClipboard = (text: string) => {
@@ -154,47 +139,19 @@ function TitleExtractor() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-      <div className="absolute top-0 right-0 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-      <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-
+    <AppShell gradient="bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
       <div className="relative z-10">
         {/* Header */}
         <div className="max-w-6xl mx-auto px-4 pt-8 pb-4">
-          <div className="flex items-center justify-between mb-8">
-            <button
-              onClick={goHome}
-              className="group flex items-center space-x-3 bg-white/80 backdrop-blur-md rounded-2xl px-6 py-4 border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              <svg
-                className="w-5 h-5 text-slate-600 group-hover:text-slate-800 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-              <span className="font-semibold text-slate-700 group-hover:text-slate-900">
-                Back to Home
-              </span>
-            </button>
-
-            <div className="text-right bg-white/80 backdrop-blur-md rounded-2xl px-6 py-4 border border-white/50 shadow-lg">
-              <div className="text-lg font-bold text-slate-800">
-                Title & Link Extractor
-              </div>
-              <div className="text-sm text-slate-600">
-                AI-Powered OCR Technology
-              </div>
-            </div>
-          </div>
+          <PageHeaderCard
+            onBack={goHome}
+            title="Title & Link Extractor"
+            subtitle="AI-Powered OCR Technology"
+            stats={[
+              { label: "Step-by-Step", value: "Upload ▸ Extract ▸ Copy" },
+              { label: "Average run", value: "~6s per image" },
+            ]}
+          />
 
           {/* Main Card */}
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden mb-8">
@@ -204,19 +161,47 @@ function TitleExtractor() {
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
 
               <div className="relative z-10">
-                <h1 className="text-4xl font-bold text-white mb-4">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
                   Extract Titles & Links from Images
                 </h1>
-                <p className="text-purple-100 text-lg max-w-2xl">
+                <p className="text-purple-100 text-base sm:text-lg max-w-2xl">
                   Upload screenshots of search results to automatically extract
                   titles, URLs, and descriptions with our advanced AI technology
                 </p>
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                  {[
+                    {
+                      label: "Ideal for",
+                      value: "Market & SEO research",
+                    },
+                    {
+                      label: "Accuracy boost",
+                      value: "+92% link detection",
+                    },
+                    {
+                      label: "Privacy",
+                      value: "Processed in-session only",
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="bg-white/15 rounded-2xl px-4 py-3 backdrop-blur-sm border border-white/10 text-center sm:text-left"
+                    >
+                      <div className="text-purple-50 uppercase tracking-wide text-xs mb-1">
+                        {stat.label}
+                      </div>
+                      <div className="text-white font-semibold text-base">
+                        {stat.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* Upload Section */}
-            <div className="p-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="p-6 sm:p-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                 {/* Left Column - Upload Area */}
                 <div>
                   <div className="mb-8">
@@ -230,93 +215,21 @@ function TitleExtractor() {
                     </p>
                   </div>
 
-                  {/* Drop Zone */}
-                  <div
-                    className={`relative border-3 border-dashed rounded-2xl p-8 text-center transition-all duration-500 cursor-pointer mb-6 group ${
-                      isDragging
-                        ? "border-purple-500 bg-purple-50 scale-105"
-                        : "border-slate-300 hover:border-purple-400 hover:bg-purple-50"
-                    }`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onClick={triggerFileInput}
-                  >
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleFileSelect}
-                      ref={fileInputRef}
-                      className="hidden"
-                    />
+                  <UploadDropzone
+                    files={files}
+                    processing={processing}
+                    helperText="Perfect for search result screenshots"
+                    maxSizeCopy="Supports JPG, PNG, BMP • Maximum 1MB per file"
+                    onFilesChange={handleFilesChange}
+                    onClearWorkspace={resetWorkspace}
+                    isClearDisabled={files.length === 0 && results.length === 0}
+                  />
 
-                    <div className="max-w-md mx-auto">
-                      <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                        <svg
-                          className="w-10 h-10 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </div>
-
-                      <h3 className="text-xl font-semibold text-slate-800 mb-3">
-                        {files.length > 0
-                          ? `📁 ${files.length} file${
-                              files.length > 1 ? "s" : ""
-                            } selected`
-                          : processing
-                          ? "🔄 Processing your files..."
-                          : "✨ Drop images here or click to browse"}
-                      </h3>
-
-                      <p className="text-slate-500 text-sm mb-4">
-                        Supports JPG, PNG, BMP • Maximum 1MB per file
-                      </p>
-
-                      <div className="inline-flex items-center space-x-2 bg-slate-100 rounded-full px-4 py-2">
-                        <svg
-                          className="w-4 h-4 text-slate-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        <span className="text-slate-600 text-sm">
-                          Perfect for search result screenshots
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
                   {processing && (
-                    <div className="mb-6">
-                      <div className="flex justify-between text-sm text-slate-600 mb-2">
-                        <span>Processing files...</span>
-                        <span>{uploadProgress}%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-3">
-                        <div
-                          className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300 ease-out"
-                          style={{ width: `${uploadProgress}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                    <ProgressBar
+                      value={uploadProgress}
+                      accentClass="from-purple-500 to-pink-500"
+                    />
                   )}
 
                   {/* Upload Button */}
@@ -357,76 +270,65 @@ function TitleExtractor() {
                       </>
                     )}
                   </button>
+
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setShowGuide((prev) => !prev)}
+                      className="w-full flex items-center justify-between bg-slate-100 px-4 py-3 rounded-2xl text-sm font-semibold text-slate-700 hover:bg-slate-200 transition"
+                    >
+                      <span>Need a quick walkthrough?</span>
+                      <svg
+                        className={`w-4 h-4 transition-transform ${
+                          showGuide ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+                    {showGuide && (
+                      <ol className="mt-4 space-y-3 bg-white rounded-2xl border border-slate-200 p-4 text-sm text-slate-600">
+                        <li>
+                          <span className="font-semibold text-slate-800">
+                            1.
+                          </span>{" "}
+                          Drop up to 5 screenshots with readable titles & URLs.
+                        </li>
+                        <li>
+                          <span className="font-semibold text-slate-800">
+                            2.
+                          </span>{" "}
+                          Hit <span className="font-semibold">Extract</span> and
+                          let the AI detect structured result blocks.
+                        </li>
+                        <li>
+                          <span className="font-semibold text-slate-800">
+                            3.
+                          </span>{" "}
+                          Copy the hyperlinks or raw text for your notes or
+                          spreadsheets.
+                        </li>
+                      </ol>
+                    )}
+                  </div>
                 </div>
 
                 {/* Right Column - File List & Info */}
                 <div>
-                  {/* File List */}
                   {files.length > 0 && (
-                    <div className="mb-8">
-                      <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center space-x-2">
-                        <span>📄 Selected Files</span>
-                        <span className="bg-purple-100 text-purple-600 text-sm px-3 py-1 rounded-full">
-                          {files.length}
-                        </span>
-                      </h3>
-                      <div className="space-y-3 max-h-60 overflow-y-auto">
-                        {files.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between bg-white rounded-xl p-4 border border-slate-200 hover:border-purple-300 transition-all duration-300 hover:shadow-md group/item"
-                          >
-                            <div className="flex items-center space-x-4">
-                              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                <svg
-                                  className="w-5 h-5 text-purple-600"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                  />
-                                </svg>
-                              </div>
-                              <div>
-                                <div className="text-slate-800 font-medium text-sm truncate max-w-xs">
-                                  {file.name}
-                                </div>
-                                <div className="text-slate-500 text-xs">
-                                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                                </div>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeFile(index);
-                              }}
-                              className="text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <FileList
+                      files={files}
+                      onRemoveFile={removeFile}
+                      accentColor="purple"
+                    />
                   )}
 
                   {/* Tips Card */}
@@ -470,12 +372,12 @@ function TitleExtractor() {
           {/* Results Section */}
           {results.length > 0 && (
             <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden mb-8">
-              <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6">
-                <div className="flex items-center justify-between">
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4 sm:p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
                     <span>🎉 Extraction Complete!</span>
                   </h2>
-                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 text-center">
                     <span className="text-white font-semibold">
                       {results.reduce((acc, r) => acc + r.resultCount, 0)} links
                       found
@@ -484,7 +386,7 @@ function TitleExtractor() {
                 </div>
               </div>
 
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="space-y-6">
                   {results.map((result, idx) => (
                     <div
@@ -497,8 +399,8 @@ function TitleExtractor() {
                           : "from-yellow-500 to-amber-500"
                       }`}
                     >
-                      <div className="bg-white rounded-xl p-6">
-                        <div className="flex items-center justify-between mb-4">
+                      <div className="bg-white rounded-xl p-4 sm:p-6">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
                           <div className="flex items-center space-x-4">
                             <div
                               className={`w-12 h-12 rounded-xl flex items-center justify-center ${
@@ -702,7 +604,7 @@ function TitleExtractor() {
 
           {/* Empty State */}
           {!processing && results.length === 0 && files.length === 0 && (
-            <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 p-12 text-center">
+            <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 p-8 sm:p-12 text-center">
               <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-3xl flex items-center justify-center">
                 <svg
                   className="w-12 h-12 text-purple-600"
@@ -730,13 +632,39 @@ function TitleExtractor() {
                   ✨ Perfect for research, content curation, and data extraction
                 </span>
               </div>
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+                {[
+                  {
+                    title: "Crystal Clear Dashboard",
+                    copy: "Track every upload with live progress feedback and smart toasts.",
+                  },
+                  {
+                    title: "Copy-ready Results",
+                    copy: "Use the copy buttons to move summaries into docs in a click.",
+                  },
+                  {
+                    title: "Privacy-first",
+                    copy: "Files stay in-memory only—refresh to clean your workspace.",
+                  },
+                ].map((card) => (
+                  <div
+                    key={card.title}
+                    className="bg-slate-50 border border-slate-100 rounded-2xl p-4 shadow-sm"
+                  >
+                    <div className="text-sm font-semibold text-purple-600 mb-1">
+                      {card.title}
+                    </div>
+                    <p className="text-slate-600 text-sm">{card.copy}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
         <div className="text-center py-8">
-          <div className="inline-flex flex-wrap justify-center gap-6 bg-white/80 backdrop-blur-md rounded-2xl px-8 py-6 border border-white/50 shadow-lg">
+          <div className="inline-flex flex-wrap justify-center gap-6 bg-white/80 backdrop-blur-md rounded-2xl px-6 sm:px-8 py-6 border border-white/50 shadow-lg w-full max-w-3xl mx-auto">
             <div className="flex items-center space-x-3">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               <div>
@@ -768,104 +696,36 @@ function TitleExtractor() {
         </div>
       </div>
 
-      {/* Success Toast */}
       {showSuccess && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center space-x-4 backdrop-blur-md">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <div>
-              <div className="font-bold">🎉 Extraction Complete!</div>
-              <div className="text-green-100 text-sm">
-                All titles and links have been extracted successfully
-              </div>
-            </div>
-          </div>
-        </div>
+        <Toast
+          title="🎉 Extraction Complete!"
+          message="All titles and links have been extracted successfully"
+        />
       )}
 
-      {/* Error Toast */}
       {showError && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center space-x-4 backdrop-blur-md">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <div>
-              <div className="font-bold">⚠️ Partial Completion</div>
-              <div className="text-red-100 text-sm">
-                Some files couldn&apos;t be processed
-              </div>
-            </div>
-          </div>
-        </div>
+        <Toast
+          title="⚠️ Partial Completion"
+          message="Some files couldn&apos;t be processed"
+          gradientClass="from-red-500 to-pink-500"
+          icon={
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          }
+        />
       )}
-
-      {/* Global Styles */}
-      <style jsx global>{`
-        @keyframes blob {
-          0% {
-            transform: translate(0px, 0px) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-          100% {
-            transform: translate(0px, 0px) scale(1);
-          }
-        }
-        @keyframes slide-up {
-          0% {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          100% {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
-    </main>
+    </AppShell>
   );
 }
 

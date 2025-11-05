@@ -1,6 +1,12 @@
 import { useRouter } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { withAuth } from "../../components/withAuth";
+import AppShell from "../../components/layout/AppShell";
+import PageHeaderCard from "../../components/ui/PageHeaderCard";
+import UploadDropzone from "../../components/upload/UploadDropzone";
+import FileList from "../../components/upload/FileList";
+import ProgressBar from "../../components/ui/ProgressBar";
+import Toast from "../../components/feedback/Toast";
 
 interface FileResult {
   name: string;
@@ -13,11 +19,9 @@ function FullPageExtractor() {
   const [files, setFiles] = useState<File[]>([]);
   const [results, setResults] = useState<FileResult[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Simulate upload progress
   useEffect(() => {
@@ -73,7 +77,7 @@ function FullPageExtractor() {
           try {
             const errorData = await res.json();
             errorMessage = errorData.message || errorMessage;
-          } catch (e) {
+          } catch {
             const errorText = await res.text();
             errorMessage = errorText || errorMessage;
           }
@@ -121,36 +125,19 @@ function FullPageExtractor() {
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => setIsDragging(false);
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    const imageFiles = droppedFiles.filter((file) =>
-      file.type.startsWith("image/")
-    );
-    if (imageFiles.length > 0) setFiles(imageFiles);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
-    setFiles(selectedFiles);
-  };
-
   const removeFile = (index: number) => {
     const newFiles = [...files];
     newFiles.splice(index, 1);
     setFiles(newFiles);
   };
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
+  const resetWorkspace = () => {
+    setFiles([]);
+    setResults([]);
+  };
+
+  const handleFilesChange = (selectedFiles: File[]) => {
+    setFiles(selectedFiles);
   };
 
   const copyToClipboard = (text: string) => {
@@ -170,47 +157,19 @@ function FullPageExtractor() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-      <div className="absolute top-0 right-0 w-72 h-72 bg-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-      <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-sky-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-
+    <AppShell gradient="bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
       <div className="relative z-10">
         {/* Header */}
         <div className="max-w-6xl mx-auto px-4 pt-8 pb-4">
-          <div className="flex items-center justify-between mb-8">
-            <button
-              onClick={goHome}
-              className="group flex items-center space-x-3 bg-white/80 backdrop-blur-md rounded-2xl px-6 py-4 border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              <svg
-                className="w-5 h-5 text-slate-600 group-hover:text-slate-800 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-              <span className="font-semibold text-slate-700 group-hover:text-slate-900">
-                Back to Home
-              </span>
-            </button>
-
-            <div className="text-right bg-white/80 backdrop-blur-md rounded-2xl px-6 py-4 border border-white/50 shadow-lg">
-              <div className="text-lg font-bold text-slate-800">
-                Full Page OCR
-              </div>
-              <div className="text-sm text-slate-600">
-                Advanced Text Extraction
-              </div>
-            </div>
-          </div>
+          <PageHeaderCard
+            onBack={goHome}
+            title="Full Page OCR"
+            subtitle="Advanced Text Extraction"
+            stats={[
+              { label: "Best for", value: "Docs & screenshots" },
+              { label: "Avg. speed", value: "~4s per image" },
+            ]}
+          />
 
           {/* Main Card */}
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden mb-8">
@@ -245,93 +204,25 @@ function FullPageExtractor() {
                     </p>
                   </div>
 
-                  {/* Drop Zone */}
-                  <div
-                    className={`relative border-3 border-dashed rounded-2xl p-8 text-center transition-all duration-500 cursor-pointer mb-6 group ${
-                      isDragging
-                        ? "border-blue-500 bg-blue-50 scale-105"
-                        : "border-slate-300 hover:border-blue-400 hover:bg-blue-50"
-                    }`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onClick={triggerFileInput}
-                  >
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleFileSelect}
-                      ref={fileInputRef}
-                      className="hidden"
-                    />
+                  <UploadDropzone
+                    files={files}
+                    processing={processing}
+                    helperText="Perfect for documents, screenshots, and photos"
+                    maxSizeCopy="Supports JPG, PNG, BMP • Maximum 1MB per file"
+                    accentGradient="from-blue-500 to-cyan-500"
+                    idleClasses="border-slate-300 hover:border-blue-400 hover:bg-blue-50"
+                    activeClasses="border-blue-500 bg-blue-50 scale-105"
+                    browseLabel="Browse files"
+                    onFilesChange={handleFilesChange}
+                    onClearWorkspace={resetWorkspace}
+                    isClearDisabled={files.length === 0 && results.length === 0}
+                  />
 
-                    <div className="max-w-md mx-auto">
-                      <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                        <svg
-                          className="w-10 h-10 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
-                          />
-                        </svg>
-                      </div>
-
-                      <h3 className="text-xl font-semibold text-slate-800 mb-3">
-                        {files.length > 0
-                          ? `📁 ${files.length} file${
-                              files.length > 1 ? "s" : ""
-                            } selected`
-                          : processing
-                          ? "🔄 Processing your files..."
-                          : "✨ Drop images here or click to browse"}
-                      </h3>
-
-                      <p className="text-slate-500 text-sm mb-4">
-                        Supports JPG, PNG, BMP • Maximum 1MB per file
-                      </p>
-
-                      <div className="inline-flex items-center space-x-2 bg-slate-100 rounded-full px-4 py-2">
-                        <svg
-                          className="w-4 h-4 text-slate-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        <span className="text-slate-600 text-sm">
-                          Perfect for documents, screenshots, and photos
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
                   {processing && (
-                    <div className="mb-6">
-                      <div className="flex justify-between text-sm text-slate-600 mb-2">
-                        <span>Processing files...</span>
-                        <span>{uploadProgress}%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-3">
-                        <div
-                          className="bg-gradient-to-r from-blue-500 to-cyan-500 h-3 rounded-full transition-all duration-300 ease-out"
-                          style={{ width: `${uploadProgress}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                    <ProgressBar
+                      value={uploadProgress}
+                      accentClass="from-blue-500 to-cyan-500"
+                    />
                   )}
 
                   {/* Upload Button */}
@@ -376,72 +267,12 @@ function FullPageExtractor() {
 
                 {/* Right Column - File List & Info */}
                 <div>
-                  {/* File List */}
                   {files.length > 0 && (
-                    <div className="mb-8">
-                      <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center space-x-2">
-                        <span>📄 Selected Files</span>
-                        <span className="bg-blue-100 text-blue-600 text-sm px-3 py-1 rounded-full">
-                          {files.length}
-                        </span>
-                      </h3>
-                      <div className="space-y-3 max-h-60 overflow-y-auto">
-                        {files.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between bg-white rounded-xl p-4 border border-slate-200 hover:border-blue-300 transition-all duration-300 hover:shadow-md group/item"
-                          >
-                            <div className="flex items-center space-x-4">
-                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <svg
-                                  className="w-5 h-5 text-blue-600"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                  />
-                                </svg>
-                              </div>
-                              <div>
-                                <div className="text-slate-800 font-medium text-sm truncate max-w-xs">
-                                  {file.name}
-                                </div>
-                                <div className="text-slate-500 text-xs">
-                                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                                </div>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeFile(index);
-                              }}
-                              className="text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <FileList
+                      files={files}
+                      onRemoveFile={removeFile}
+                      accentColor="blue"
+                    />
                   )}
 
                   {/* Tips Card */}
@@ -708,104 +539,36 @@ function FullPageExtractor() {
         </div>
       </div>
 
-      {/* Success Toast */}
       {showSuccess && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center space-x-4 backdrop-blur-md">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <div>
-              <div className="font-bold">🎉 Extraction Complete!</div>
-              <div className="text-green-100 text-sm">
-                All text has been extracted successfully
-              </div>
-            </div>
-          </div>
-        </div>
+        <Toast
+          title="🎉 Extraction Complete!"
+          message="All text has been extracted successfully"
+        />
       )}
 
-      {/* Error Toast */}
       {showError && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center space-x-4 backdrop-blur-md">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <div>
-              <div className="font-bold">⚠️ Processing Issues</div>
-              <div className="text-red-100 text-sm">
-                Some files couldn&apos;t be processed
-              </div>
-            </div>
-          </div>
-        </div>
+        <Toast
+          title="⚠️ Processing Issues"
+          message="Some files couldn&apos;t be processed"
+          gradientClass="from-red-500 to-pink-500"
+          icon={
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          }
+        />
       )}
-
-      {/* Global Styles */}
-      <style jsx global>{`
-        @keyframes blob {
-          0% {
-            transform: translate(0px, 0px) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-          100% {
-            transform: translate(0px, 0px) scale(1);
-          }
-        }
-        @keyframes slide-up {
-          0% {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          100% {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
-    </main>
+    </AppShell>
   );
 }
 
