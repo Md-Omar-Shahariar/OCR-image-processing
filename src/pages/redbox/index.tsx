@@ -2,6 +2,9 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 import { createWorker } from "tesseract.js";
 import { withAuth } from "../../components/withAuth";
+import AppShell from "../../components/layout/AppShell";
+import PageHeaderCard from "../../components/ui/PageHeaderCard";
+import ProgressBar from "../../components/ui/ProgressBar";
 
 // Type definitions
 interface Box {
@@ -460,47 +463,26 @@ function RedBoxScanner() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-orange-50 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-red-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-      <div className="absolute top-0 right-0 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-      <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-
+    <AppShell
+      gradient="bg-gradient-to-br from-slate-50 via-red-50 to-orange-50"
+      overlay={
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-100 to-transparent animate-pulse"></div>
+        </div>
+      }
+    >
       <div className="relative z-10">
         {/* Header */}
         <div className="max-w-7xl mx-auto px-4 pt-8 pb-4">
-          <div className="flex items-center justify-between mb-8">
-            <button
-              onClick={goHome}
-              className="group flex items-center space-x-3 bg-white/80 backdrop-blur-md rounded-2xl px-6 py-4 border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              <svg
-                className="w-5 h-5 text-slate-600 group-hover:text-slate-800 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-              <span className="font-semibold text-slate-700 group-hover:text-slate-900">
-                Back to Home
-              </span>
-            </button>
-
-            <div className="text-right bg-white/80 backdrop-blur-md rounded-2xl px-6 py-4 border border-white/50 shadow-lg">
-              <div className="text-lg font-bold text-slate-800">
-                Red Box Scanner
-              </div>
-              <div className="text-sm text-slate-600">
-                Advanced Computer Vision
-              </div>
-            </div>
-          </div>
+          <PageHeaderCard
+            onBack={goHome}
+            title="Red Box Scanner"
+            subtitle="Advanced Computer Vision"
+            stats={[
+              { label: "Detection mode", value: "Red ROI" },
+              { label: "Engines", value: "OpenCV + Tesseract" },
+            ]}
+          />
 
           {/* Main Card */}
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden mb-8">
@@ -601,20 +583,12 @@ function RedBoxScanner() {
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
                   {isProcessing && (
-                    <div className="mb-6">
-                      <div className="flex justify-between text-sm text-slate-600 mb-2">
-                        <span>Processing image...</span>
-                        <span>{uploadProgress}%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-3">
-                        <div
-                          className="bg-gradient-to-r from-red-500 to-orange-500 h-3 rounded-full transition-all duration-300 ease-out"
-                          style={{ width: `${uploadProgress}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                    <ProgressBar
+                      value={uploadProgress}
+                      label="Processing image..."
+                      accentClass="from-red-500 to-orange-500"
+                    />
                   )}
 
                   {/* Status Display */}
@@ -945,34 +919,7 @@ function RedBoxScanner() {
           </div>
         </div>
       </div>
-
-      {/* Global Styles */}
-      <style jsx global>{`
-        @keyframes blob {
-          0% {
-            transform: translate(0px, 0px) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-          100% {
-            transform: translate(0px, 0px) scale(1);
-          }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
-    </main>
+    </AppShell>
   );
 }
 
