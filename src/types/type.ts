@@ -20,6 +20,7 @@ export interface ApiResponse {
   text?: string;
   searchResults?: SearchResult[];
   resultsCount?: number;
+  resultCount?: number;
   rawText?: string;
   message?: string;
 }
