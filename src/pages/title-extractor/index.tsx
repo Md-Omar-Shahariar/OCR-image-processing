@@ -43,7 +43,6 @@ const titleEngineOptions = {
 } as const;
 
 type TitleEngine = keyof typeof titleEngineOptions;
-const titleEngineOrder: TitleEngine[] = ["ocrspace", "vision"];
 
 function TitleExtractor() {
   const router = useRouter();
@@ -68,14 +67,12 @@ function TitleExtractor() {
 
   useEffect(() => {
     const engineParam = searchParams.get("engine");
-    if (
-      engineParam &&
-      (engineParam === "vision" || engineParam === "ocrspace") &&
-      engineParam !== engine
-    ) {
-      setEngine(engineParam as TitleEngine);
+    if (engineParam === "vision" || engineParam === "ocrspace") {
+      setEngine(engineParam);
+    } else {
+      setEngine("ocrspace");
     }
-  }, [searchParams, engine]);
+  }, [searchParams]);
 
   // Simulate upload progress
   useEffect(() => {
@@ -268,63 +265,18 @@ function TitleExtractor() {
                     </p>
                   </div>
 
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
-                        Choose OCR Engine
-                      </h3>
-                      <span className="text-xs text-slate-500">
-                        CopyFish or Google Vision
-                      </span>
+                  <div className="mb-6 flex items-center justify-between border border-slate-200 rounded-2xl p-4 bg-slate-50">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                        Active engine
+                      </p>
+                      <p className="text-lg font-semibold text-slate-800">
+                        {activeEngine.label}
+                      </p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {titleEngineOrder.map((key) => {
-                        const option = titleEngineOptions[key];
-                        const isActive = engine === key;
-                        return (
-                          <button
-                            type="button"
-                            key={key}
-                            disabled={processing}
-                            onClick={() => setEngine(key)}
-                            className={`text-left rounded-2xl border px-4 py-4 transition-all ${
-                              isActive
-                                ? `bg-gradient-to-r ${option.accent} text-white shadow-lg`
-                                : "bg-white text-slate-700 hover:border-slate-300"
-                            }`}
-                            aria-pressed={isActive}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span
-                                className={`font-semibold ${
-                                  isActive ? "text-white" : "text-slate-800"
-                                }`}
-                              >
-                                {option.label}
-                              </span>
-                              {option.badge && (
-                                <span
-                                  className={`text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full ${
-                                    isActive
-                                      ? "bg-white/25 text-white"
-                                      : "bg-slate-100 text-slate-600"
-                                  }`}
-                                >
-                                  {option.badge}
-                                </span>
-                              )}
-                            </div>
-                            <p
-                              className={`text-sm ${
-                                isActive ? "text-white/80" : "text-slate-500"
-                              }`}
-                            >
-                              {option.description}
-                            </p>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-600">
+                      Preselected on home
+                    </span>
                   </div>
 
                   <UploadDropzone

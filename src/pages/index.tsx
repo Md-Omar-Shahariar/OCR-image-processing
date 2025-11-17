@@ -6,151 +6,103 @@ import BasicAuth from "../components/BasicAuth";
 import AppShell from "../components/layout/AppShell";
 import FeatureCard, { Feature } from "../components/ui/FeatureCard";
 
-type ModalType = "full" | "title";
+type EngineCardId =
+  | "full-copyfish"
+  | "full-vision"
+  | "title-copyfish"
+  | "title-vision";
 
-interface ModalOption {
-  id: string;
+interface EngineCard {
+  id: EngineCardId;
   label: string;
-  description: string;
-  badge?: string;
-  details?: string;
-  path: string;
-  accent: string;
-}
-
-interface ModalConfig {
-  title: string;
-  subtitle: string;
-  description: string;
-  options: ModalOption[];
-}
-
-interface PrimaryCard {
-  id: ModalType;
-  title: string;
-  description: string;
+  summary: string;
   gradient: string;
-  accent: string;
-  stats: string[];
-  icon: JSX.Element;
+  path: string;
+  badge: string;
+  details: string;
+  chips: string[];
+}
+
+interface WorkflowSection {
+  id: string;
+  badge: string;
+  title: string;
+  description: string;
+  cards: EngineCardId[];
 }
 
 function HomePageContent() {
   const router = useRouter();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const [activeModal, setActiveModal] = useState<ModalType | null>(null);
+  const [activeCard, setActiveCard] = useState<EngineCardId | null>(null);
 
   const navigateTo = (path: string) => {
     router.push(path);
   };
 
-  const primaryCards: PrimaryCard[] = [
+  const engineCards: Record<EngineCardId, EngineCard> = {
+    "full-copyfish": {
+      id: "full-copyfish",
+      label: "Full Page · CopyFish",
+      summary: "Use OCR.Space / CopyFish for fast, generous 10MB batches.",
+      gradient: "from-blue-600 via-cyan-500 to-teal-500",
+      path: "/text-extractor?engine=ocrspace",
+      badge: "CopyFish",
+      details: "Engine 2 • Multi-file batching",
+      chips: ["Default", "Up to 10MB", "Batch ready"],
+    },
+    "full-vision": {
+      id: "full-vision",
+      label: "Full Page · Google Vision",
+      summary:
+        "Route scans to DOCUMENT_TEXT_DETECTION for column-heavy layouts.",
+      gradient: "from-emerald-500 via-sky-500 to-blue-500",
+      path: "/text-extractor?engine=vision",
+      badge: "Vision",
+      details: "4MB limit • DOCUMENT_TEXT_DETECTION",
+      chips: ["Multilingual", "Premium OCR", "Best accuracy"],
+    },
+    "title-copyfish": {
+      id: "title-copyfish",
+      label: "Title Extractor · CopyFish",
+      summary: "Great for quick SERP screenshots with Latin characters.",
+      gradient: "from-purple-600 via-pink-500 to-rose-500",
+      path: "/title-extractor?engine=ocrspace",
+      badge: "CopyFish",
+      details: "Engine 2 • Up to 10MB",
+      chips: ["SEO research", "Fast parsing", "Link-ready"],
+    },
+    "title-vision": {
+      id: "title-vision",
+      label: "Title Extractor · Google Vision",
+      summary:
+        "Use TEXT_DETECTION when CopyFish misses dense, multilingual SERPs.",
+      gradient: "from-emerald-500 via-teal-500 to-sky-500",
+      path: "/title-extractor?engine=vision",
+      badge: "Vision",
+      details: "4MB limit • TEXT_DETECTION",
+      chips: ["Multilingual", "High confidence", "SERP focused"],
+    },
+  };
+
+  const workflowSections: WorkflowSection[] = [
     {
       id: "full",
+      badge: "Workspace · 01",
       title: "Full Page OCR",
       description:
-        "Extract every character from scans, PDFs, and screenshots with CopyFish or Google Vision.",
-      gradient: "from-blue-600 via-cyan-500 to-teal-500",
-      accent: "text-cyan-100",
-      stats: ["Docs & screenshots", "Up to 10MB", "Batch ready"],
-      icon: (
-        <svg
-          className="w-10 h-10"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10h6m0 0a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
-          />
-        </svg>
-      ),
+        "Choose between CopyFish speed or Google Vision accuracy before you upload.",
+      cards: ["full-copyfish", "full-vision"],
     },
     {
       id: "title",
+      badge: "Workspace · 02",
       title: "Title & Link Extractor",
       description:
-        "Pull SERP titles, URLs, and snippets instantly. Swap engines per upload.",
-      gradient: "from-purple-600 via-pink-500 to-rose-500",
-      accent: "text-pink-100",
-      stats: ["SEO & research", "Link-ready output", "Multilingual"],
-      icon: (
-        <svg
-          className="w-10 h-10"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M7 8h10M7 12h5m7 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2z"
-          />
-        </svg>
-      ),
+        "Pick the engine that best matches your SERP screenshots and jump straight into extraction.",
+      cards: ["title-copyfish", "title-vision"],
     },
   ];
-
-  const modalContent: Record<ModalType, ModalConfig> = {
-    full: {
-      title: "Choose your OCR engine",
-      subtitle: "Full Page OCR",
-      description:
-        "Send files through CopyFish for speed or route to Google Vision for document-grade accuracy.",
-      options: [
-        {
-          id: "copyfish-full",
-          label: "CopyFish (OCR.Space)",
-          description: "Fast, generous 10MB limit. Perfect for everyday scans.",
-          badge: "Default",
-          details: "Engine 2 • Multi-file batching",
-          path: "/text-extractor?engine=ocrspace",
-          accent: "from-blue-500 to-cyan-500",
-        },
-        {
-          id: "vision-full",
-          label: "Google Vision",
-          description:
-            "Use DOCUMENT_TEXT_DETECTION for dense layouts and multilingual characters.",
-          badge: "Premium",
-          details: "Vision API • 4MB per file",
-          path: "/text-extractor?engine=vision",
-          accent: "from-emerald-500 to-sky-500",
-        },
-      ],
-    },
-    title: {
-      title: "Pick how to parse SERPs",
-      subtitle: "Title & Link Extractor",
-      description:
-        "Great SERP parsing starts with clean OCR. Choose the engine per screenshot.",
-      options: [
-        {
-          id: "copyfish-title",
-          label: "CopyFish (OCR.Space)",
-          description: "Best for quick snapshots and Latin characters.",
-          badge: "Default",
-          details: "Up to 10MB • OCR.Space Engine 2",
-          path: "/title-extractor?engine=ocrspace",
-          accent: "from-purple-500 to-pink-500",
-        },
-        {
-          id: "vision-title",
-          label: "Google Vision",
-          description:
-            "Ideal for dense or multilingual SERPs when CopyFish struggles.",
-          badge: "Vision AI",
-          details: "TEXT_DETECTION • 4MB per file",
-          path: "/title-extractor?engine=vision",
-          accent: "from-emerald-500 to-sky-500",
-        },
-      ],
-    },
-  };
 
   const secondaryFeatures: Feature[] = [
     {
@@ -215,13 +167,13 @@ function HomePageContent() {
     },
   ];
 
-  const openModal = (type: ModalType) => setActiveModal(type);
-  const closeModal = () => setActiveModal(null);
-  const handleModalNavigate = (path: string) => {
+  const openModal = (cardId: EngineCardId) => setActiveCard(cardId);
+  const closeModal = () => setActiveCard(null);
+  const handleLaunch = (path: string) => {
     router.push(path);
     closeModal();
   };
-  const selectedModal = activeModal ? modalContent[activeModal] : null;
+  const selectedCard = activeCard ? engineCards[activeCard] : null;
 
   return (
     <AppShell
@@ -265,75 +217,89 @@ function HomePageContent() {
 
         {/* Engine Selector Cards */}
         <div className="max-w-7xl mx-auto px-4 pb-16 space-y-16">
-          <div className="max-w-5xl mx-auto relative">
-            <div className="md:min-h-[420px] relative">
-              {primaryCards.map((card, index) => (
-                <div
-                  key={card.id}
-                  className={`relative mb-6 md:mb-0 transition-all duration-300 ${
+          {workflowSections.map((section) => (
+            <div
+              key={section.id}
+              className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-10"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-slate-400">
+                    {section.badge}
+                  </p>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-2">
+                    {section.title}
+                  </h3>
+                  <p className="text-slate-600 mt-2">{section.description}</p>
+                </div>
+                <div className="flex gap-3">
+                  {section.cards.map((cardId) => (
+                    <span
+                      key={cardId}
+                      className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500"
+                    >
+                      {engineCards[cardId].badge}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="relative mt-8 space-y-6 md:space-y-0 md:min-h-[320px]">
+                {section.cards.map((cardId, index) => {
+                  const card = engineCards[cardId];
+                  const positionClasses =
                     index === 0
-                      ? "md:absolute md:left-0 md:top-0 md:w-[70%]"
-                      : "md:absolute md:right-0 md:top-16 md:w-[70%]"
-                  }`}
-                >
-                  <div
-                    onClick={() => openModal(card.id)}
-                    className={`cursor-pointer group rounded-3xl shadow-2xl p-8 lg:p-10 text-white bg-gradient-to-br ${card.gradient} ${
-                      index === 0 ? "md:-rotate-1" : "md:rotate-1"
-                    } hover:scale-[1.01] hover:-translate-y-2 transition-transform`}
-                  >
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center space-x-4">
-                        <div className="bg-white/15 rounded-2xl p-3">
-                          {card.icon}
+                      ? "md:absolute md:left-4 md:top-0 md:w-2/3 md:-rotate-1"
+                      : "md:absolute md:right-4 md:top-12 md:w-2/3 md:rotate-1";
+                  return (
+                    <div
+                      key={card.id}
+                      className={`transition-all duration-300 ${positionClasses}`}
+                    >
+                      <div
+                        onClick={() => openModal(card.id)}
+                        className={`cursor-pointer rounded-3xl shadow-2xl p-6 sm:p-8 text-white bg-gradient-to-br ${card.gradient} hover:scale-[1.01] hover:-translate-y-2 transition-transform`}
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.3em] text-white/70">
+                              {section.title}
+                            </p>
+                            <h4 className="text-xl sm:text-2xl font-bold mt-1">
+                              {card.label}
+                            </h4>
+                          </div>
+                          <span className="text-xs font-semibold bg-white/20 px-3 py-1 rounded-full">
+                            {card.details}
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.3em] text-white/70">
-                            {index === 0 ? "Workspace 01" : "Workspace 02"}
-                          </p>
-                          <h3 className="text-2xl lg:text-3xl font-bold">
-                            {card.title}
-                          </h3>
+                        <p className="text-white/85">{card.summary}</p>
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {card.chips.map((chip) => (
+                            <span
+                              key={chip}
+                              className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold"
+                            >
+                              {chip}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="mt-6">
+                          <button
+                            type="button"
+                            onClick={() => openModal(card.id)}
+                            className="bg-white/10 border border-white/20 px-5 py-2.5 rounded-2xl font-semibold backdrop-blur-sm hover:bg-white/20 transition"
+                          >
+                            View & launch
+                          </button>
                         </div>
                       </div>
-                      <span className="text-sm font-semibold bg-white/20 px-4 py-2 rounded-full">
-                        Tap to choose engine
-                      </span>
                     </div>
-                    <p className="text-base lg:text-lg text-white/80 leading-relaxed">
-                      {card.description}
-                    </p>
-                    <div className="flex flex-wrap gap-3 mt-6">
-                      {card.stats.map((stat) => (
-                        <span
-                          key={stat}
-                          className="bg-white/20 px-4 py-1.5 rounded-full text-sm font-semibold"
-                        >
-                          {stat}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="mt-8 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() => openModal(card.id)}
-                        className="bg-white/20 border border-white/30 px-5 py-2.5 rounded-2xl font-semibold backdrop-blur-sm hover:bg-white/30 transition"
-                      >
-                        Choose engine
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openModal(card.id)}
-                        className="bg-black/20 border border-white/10 px-5 py-2.5 rounded-2xl font-semibold backdrop-blur-sm hover:bg-black/10 transition"
-                      >
-                        View workflow
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ))}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {secondaryFeatures.map((feature) => (
@@ -361,18 +327,21 @@ function HomePageContent() {
                   processing needs. No credit card required.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button
-                    onClick={() => openModal("full")}
-                    className="bg-white text-blue-600 hover:bg-blue-50 font-semibold py-4 px-8 rounded-2xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5"
-                  >
-                    Launch Full Page OCR
-                  </button>
-                  <button
-                    onClick={() => openModal("title")}
-                    className="border-2 border-white text-white hover:bg-white/10 font-semibold py-4 px-8 rounded-2xl transition-all duration-300 backdrop-blur-sm"
-                  >
-                    Review Titles & Links
-                  </button>
+                  {workflowSections.map((section) => (
+                    <button
+                      key={section.id}
+                      onClick={() => openModal(section.cards[0])}
+                      className={`${
+                        section.id === "full"
+                          ? "bg-white text-blue-600 hover:bg-blue-50"
+                          : "border-2 border-white text-white hover:bg-white/10"
+                      } font-semibold py-4 px-8 rounded-2xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5`}
+                    >
+                      {section.id === "full"
+                        ? "Launch Full Page OCR"
+                        : "Review Titles & Links"}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -416,7 +385,7 @@ function HomePageContent() {
         </div>
       </div>
 
-      {selectedModal && (
+      {selectedCard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div
             className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
@@ -445,38 +414,38 @@ function HomePageContent() {
             </button>
 
             <p className="text-xs uppercase tracking-[0.4em] text-slate-400 mb-2">
-              {selectedModal.subtitle}
+              {selectedCard.badge} workflow
             </p>
             <h3 className="text-2xl font-bold text-slate-900 mb-2">
-              {selectedModal.title}
+              {selectedCard.label}
             </h3>
-            <p className="text-slate-600 mb-6">{selectedModal.description}</p>
+            <p className="text-slate-600 mb-6">{selectedCard.summary}</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {selectedModal.options.map((option) => (
+            <div className="bg-gradient-to-br rounded-3xl p-6 text-white shadow-xl bg-slate-900">
+              <p className="text-sm uppercase tracking-[0.3em] text-white/70 mb-2">
+                Key benefits
+              </p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {selectedCard.chips.map((chip) => (
+                  <span
+                    key={chip}
+                    className="bg-white/10 px-3 py-1 rounded-full text-xs font-semibold"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-white/70">
+                  {selectedCard.details}
+                </span>
                 <button
-                  key={option.id}
-                  onClick={() => handleModalNavigate(option.path)}
-                  className={`rounded-2xl border border-slate-100 text-left p-5 bg-gradient-to-br ${option.accent} text-white shadow-lg hover:-translate-y-1 transition-transform`}
+                  onClick={() => handleLaunch(selectedCard.path)}
+                  className="bg-white text-slate-900 px-5 py-2 rounded-2xl font-semibold hover:bg-slate-100 transition"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    {option.badge && (
-                      <span className="text-xs uppercase tracking-wide bg-white/25 px-2 py-0.5 rounded-full font-semibold">
-                        {option.badge}
-                      </span>
-                    )}
-                    {option.details && (
-                      <span className="text-[11px] text-white/80">
-                        {option.details}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xl font-semibold mb-2">
-                    {option.label}
-                  </div>
-                  <p className="text-sm text-white/80">{option.description}</p>
+                  Launch workspace
                 </button>
-              ))}
+              </div>
             </div>
           </div>
         </div>
