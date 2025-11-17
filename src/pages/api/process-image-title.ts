@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import Busboy from "busboy";
-import { ApiResponse, OcrSpaceResponse, SearchResult } from "@/types/type";
+import { cleanText, extractSearchResults } from "@/lib/searchResults";
+import { ApiResponse, OcrSpaceResponse } from "@/types/type";
 
 export const config = {
   api: {
@@ -48,133 +49,6 @@ async function processOCR(
 
   const result: OcrSpaceResponse = await response.json();
   return result;
-}
-
-function extractSearchResults(text: string): SearchResult[] {
-  console.log("Processing OCR text for URL extraction");
-
-  const results: SearchResult[] = [];
-  const lines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  console.log(`Analyzing ${lines.length} text lines`);
-
-  let isUrlLine = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Enhanced URL detection with validation
-    const urlMatch = line.match(
-      /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/gi
-    );
-
-    if (urlMatch) {
-      const lineParts = line.split(" ");
-      const urlIndex = lineParts.findIndex((part) =>
-        part.includes(urlMatch[0])
-      );
-
-      // URL is considered valid if it appears at the beginning of the line
-      isUrlLine = urlIndex === 0;
-
-      if (isUrlLine) {
-        const url = urlMatch[0];
-        console.log(`Detected URL: ${url}`);
-
-        let title = "";
-        let description = "";
-
-        // Extract title from the following line
-        if (i + 1 < lines.length) {
-          const potentialTitle = lines[i + 1];
-
-          // Validate potential title
-          if (
-            potentialTitle &&
-            potentialTitle.length >= 2 &&
-            potentialTitle.length < 300 &&
-            !potentialTitle.match(/https?:\/\//) &&
-            !potentialTitle.match(/^[0-9\s\.-]+$/)
-          ) {
-            title = potentialTitle;
-            console.log(`Extracted title: "${title}"`);
-
-            // Extract description from subsequent lines
-            const descriptionLines: string[] = [];
-
-            for (let j = i + 2; j <= i + 3 && j < lines.length; j++) {
-              const descLine = lines[j];
-              if (
-                descLine &&
-                descLine.length > 3 &&
-                !descLine.match(/https?:\/\//)
-              ) {
-                descriptionLines.push(descLine);
-              }
-            }
-
-            if (descriptionLines.length > 0) {
-              description = descriptionLines.join(" ");
-              console.log(`Extracted description: "${description}"`);
-            }
-          }
-        }
-
-        // Clean and validate extracted content
-        title = title
-          .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
-          .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
-          .trim();
-
-        description = description
-          .replace(/^[●•▪▫○◙◘►▼▲\s]+/, "")
-          .replace(/[●•▪▫○◙◘►▼▲\s]+$/, "")
-          .trim();
-
-        // Add to results if we have valid title and URL
-        if (title && url) {
-          const fullUrl = url.startsWith("http") ? url : `https://${url}`;
-
-          results.push({
-            title: title,
-            url: fullUrl,
-            description: description || undefined,
-          });
-
-          console.log(`✅ Successfully processed: "${title}" -> ${fullUrl}`);
-        }
-      }
-    }
-  }
-
-  // Remove duplicate URLs
-  const uniqueResults = results.filter(
-    (result, index, self) =>
-      index === self.findIndex((r) => r.url === result.url)
-  );
-
-  console.log(
-    `Processing complete: ${uniqueResults.length} unique results found`
-  );
-  return results;
-}
-
-function cleanText(text: string): string {
-  return text
-    .split("\n")
-    .map((line) =>
-      line
-        .replace(/^Q[ ,、]?\s*\d*[.:]?\s*/g, "")
-        .replace(/[●•▪▫○◙◘►▼▲]/g, "")
-        .replace(/[!?]{2,}/g, "")
-        .replace(/\s+/g, " ")
-        .trim()
-    )
-    .filter((line) => line.length > 0)
-    .join("\n");
 }
 
 function validateLanguage(language: string): string {
@@ -346,6 +220,7 @@ export default async function handler(
       status: "success",
       text: cleanedText,
       searchResults: searchResults,
+      resultCount: searchResults.length,
       resultsCount: searchResults.length,
       rawText: rawText, // Included for debugging purposes
     });

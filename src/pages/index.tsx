@@ -76,6 +76,36 @@ function HomePageContent() {
       stats: "AI-powered",
     },
     {
+      id: "vision",
+      title: "Google Vision Title Extractor",
+      description:
+        "Use Google Cloud Vision to pull titles, URLs, and snippets from dense multilingual SERP screenshots.",
+      icon: (
+        <svg
+          className="w-8 h-8"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8c-2.21 0-4 1.79-4 4m4-4c2.21 0 4 1.79 4 4m-4-4V4m0 4v12m-7-4h14m-14 0l2.5 3m-2.5-3l2.5-3m11 3l-2.5 3m2.5-3l-2.5-3"
+          />
+        </svg>
+      ),
+      path: "/vision-extractor",
+      gradient: "from-sky-500 to-emerald-500",
+      features: [
+        "Google Vision OCR",
+        "Title/URL/Description",
+        "Dense SERP support",
+        "Multilingual",
+      ],
+      stats: "Cloud Vision",
+    },
+    {
       id: "redbox",
       title: "Red Box Detector",
       description:
@@ -211,10 +241,10 @@ function HomePageContent() {
                     Start with Full Page OCR
                   </button>
                   <button
-                    onClick={() => navigateTo("/title-extractor")}
+                    onClick={() => navigateTo("/vision-extractor")}
                     className="border-2 border-white text-white hover:bg-white/10 font-semibold py-4 px-8 rounded-2xl transition-all duration-300 backdrop-blur-sm"
                   >
-                    Try Title Extractor
+                    Try Google Vision Title Extractor
                   </button>
                 </div>
               </div>
