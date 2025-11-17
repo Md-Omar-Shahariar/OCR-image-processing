@@ -34,7 +34,7 @@ interface WorkflowSection {
 function HomePageContent() {
   const router = useRouter();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const [activeCard, setActiveCard] = useState<EngineCardId | null>(null);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const navigateTo = (path: string) => {
     router.push(path);
@@ -45,7 +45,7 @@ function HomePageContent() {
       id: "full-copyfish",
       label: "Full Page · CopyFish",
       summary: "Use OCR.Space / CopyFish for fast, generous 10MB batches.",
-      gradient: "from-blue-600 via-cyan-500 to-teal-500",
+      gradient: "from-indigo-600 via-blue-500 to-cyan-400",
       path: "/text-extractor?engine=ocrspace",
       badge: "CopyFish",
       details: "Engine 2 • Multi-file batching",
@@ -106,36 +106,6 @@ function HomePageContent() {
 
   const secondaryFeatures: Feature[] = [
     {
-      id: "vision",
-      title: "Google Vision Title Extractor",
-      description:
-        "Use Google Cloud Vision to pull titles, URLs, and snippets from dense multilingual SERP screenshots.",
-      icon: (
-        <svg
-          className="w-8 h-8"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 8c-2.21 0-4 1.79-4 4m4-4c2.21 0 4 1.79 4 4m-4-4V4m0 4v12m-7-4h14m-14 0l2.5 3m-2.5-3l2.5-3m11 3l-2.5 3m2.5-3l-2.5-3"
-          />
-        </svg>
-      ),
-      path: "/vision-extractor",
-      gradient: "from-sky-500 to-emerald-500",
-      features: [
-        "Google Vision OCR",
-        "Title/URL/Description",
-        "Dense SERP support",
-        "Multilingual",
-      ],
-      stats: "Cloud Vision",
-    },
-    {
       id: "redbox",
       title: "Red Box Detector",
       description:
@@ -167,13 +137,10 @@ function HomePageContent() {
     },
   ];
 
-  const openModal = (cardId: EngineCardId) => setActiveCard(cardId);
-  const closeModal = () => setActiveCard(null);
-  const handleLaunch = (path: string) => {
-    router.push(path);
-    closeModal();
-  };
-  const selectedCard = activeCard ? engineCards[activeCard] : null;
+  const handleLaunch = (path: string) => router.push(path);
+  const selectedSection = activeSection
+    ? workflowSections.find((section) => section.id === activeSection)
+    : null;
 
   return (
     <AppShell
@@ -215,12 +182,12 @@ function HomePageContent() {
           <div className="w-32 h-1.5 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto rounded-full shadow-lg"></div>
         </div>
 
-        {/* Engine Selector Cards */}
-        <div className="max-w-7xl mx-auto px-4 pb-16 space-y-16">
+        {/* Engine Selector Albums */}
+        <div className="max-w-7xl mx-auto px-4 pb-16 space-y-12">
           {workflowSections.map((section) => (
             <div
               key={section.id}
-              className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-10"
+              className="bg-white/85 backdrop-blur-md rounded-3xl shadow-xl border border-white/60 p-6 sm:p-8"
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -232,67 +199,48 @@ function HomePageContent() {
                   </h3>
                   <p className="text-slate-600 mt-2">{section.description}</p>
                 </div>
-                <div className="flex gap-3">
-                  {section.cards.map((cardId) => (
-                    <span
-                      key={cardId}
-                      className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500"
-                    >
-                      {engineCards[cardId].badge}
-                    </span>
-                  ))}
-                </div>
+                <button
+                  onClick={() => setActiveSection(section.id)}
+                  className="inline-flex items-center text-sm font-semibold bg-slate-900 text-white px-4 py-2 rounded-2xl hover:bg-slate-800 transition"
+                >
+                  Choose engine
+                  <svg
+                    className="w-4 h-4 ml-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
               </div>
 
-              <div className="relative mt-8 space-y-6 md:space-y-0 md:min-h-[320px]">
+              <div
+                className="relative mt-8 h-48 sm:h-56 cursor-pointer"
+                onClick={() => setActiveSection(section.id)}
+              >
                 {section.cards.map((cardId, index) => {
                   const card = engineCards[cardId];
-                  const positionClasses =
-                    index === 0
-                      ? "md:absolute md:left-4 md:top-0 md:w-2/3 md:-rotate-1"
-                      : "md:absolute md:right-4 md:top-12 md:w-2/3 md:rotate-1";
+                  const offset =
+                    index === 0 ? "left-0 top-2 rotate-[-3deg]" : "left-6 top-8 rotate-[4deg]";
                   return (
                     <div
                       key={card.id}
-                      className={`transition-all duration-300 ${positionClasses}`}
+                      className={`absolute w-3/4 sm:w-2/3 lg:w-1/2 ${offset} drop-shadow-2xl transition-transform`}
                     >
-                      <div
-                        onClick={() => openModal(card.id)}
-                        className={`cursor-pointer rounded-3xl shadow-2xl p-6 sm:p-8 text-white bg-gradient-to-br ${card.gradient} hover:scale-[1.01] hover:-translate-y-2 transition-transform`}
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.3em] text-white/70">
-                              {section.title}
-                            </p>
-                            <h4 className="text-xl sm:text-2xl font-bold mt-1">
-                              {card.label}
-                            </h4>
-                          </div>
-                          <span className="text-xs font-semibold bg-white/20 px-3 py-1 rounded-full">
-                            {card.details}
-                          </span>
-                        </div>
-                        <p className="text-white/85">{card.summary}</p>
-                        <div className="flex flex-wrap gap-2 mt-4">
-                          {card.chips.map((chip) => (
-                            <span
-                              key={chip}
-                              className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold"
-                            >
-                              {chip}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="mt-6">
-                          <button
-                            type="button"
-                            onClick={() => openModal(card.id)}
-                            className="bg-white/10 border border-white/20 px-5 py-2.5 rounded-2xl font-semibold backdrop-blur-sm hover:bg-white/20 transition"
-                          >
-                            View & launch
-                          </button>
-                        </div>
+                      <div className={`rounded-2xl p-4 sm:p-5 bg-gradient-to-br ${card.gradient} text-white`}>
+                        <p className="text-[11px] uppercase tracking-[0.3em] text-white/70">
+                          {card.badge}
+                        </p>
+                        <h4 className="text-lg font-semibold mt-1">{card.label}</h4>
+                        <p className="text-xs text-white/80 mt-2 line-clamp-2">
+                          {card.summary}
+                        </p>
                       </div>
                     </div>
                   );
@@ -327,21 +275,18 @@ function HomePageContent() {
                   processing needs. No credit card required.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  {workflowSections.map((section) => (
-                    <button
-                      key={section.id}
-                      onClick={() => openModal(section.cards[0])}
-                      className={`${
-                        section.id === "full"
-                          ? "bg-white text-blue-600 hover:bg-blue-50"
-                          : "border-2 border-white text-white hover:bg-white/10"
-                      } font-semibold py-4 px-8 rounded-2xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5`}
-                    >
-                      {section.id === "full"
-                        ? "Launch Full Page OCR"
-                        : "Review Titles & Links"}
-                    </button>
-                  ))}
+                  <button
+                    onClick={() => handleLaunch(engineCards["full-copyfish"].path)}
+                    className="bg-white text-blue-600 hover:bg-blue-50 font-semibold py-4 px-8 rounded-2xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5"
+                  >
+                    Launch Full Page OCR
+                  </button>
+                  <button
+                    onClick={() => handleLaunch(engineCards["title-copyfish"].path)}
+                    className="border-2 border-white text-white hover:bg-white/10 font-semibold py-4 px-8 rounded-2xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5"
+                  >
+                    Review Titles & Links
+                  </button>
                 </div>
               </div>
             </div>
@@ -385,17 +330,16 @@ function HomePageContent() {
         </div>
       </div>
 
-      {selectedCard && (
+      {selectedSection && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div
             className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
-            onClick={closeModal}
-            aria-label="Close engine selector"
+            onClick={() => setActiveSection(null)}
           ></div>
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl p-6 sm:p-8">
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-6 sm:p-8">
             <button
               className="absolute top-4 right-4 text-slate-500 hover:text-slate-800"
-              onClick={closeModal}
+              onClick={() => setActiveSection(null)}
               aria-label="Close modal"
             >
               <svg
@@ -414,38 +358,33 @@ function HomePageContent() {
             </button>
 
             <p className="text-xs uppercase tracking-[0.4em] text-slate-400 mb-2">
-              {selectedCard.badge} workflow
+              {selectedSection.badge}
             </p>
             <h3 className="text-2xl font-bold text-slate-900 mb-2">
-              {selectedCard.label}
+              {selectedSection.title}
             </h3>
-            <p className="text-slate-600 mb-6">{selectedCard.summary}</p>
+            <p className="text-slate-600 mb-6">{selectedSection.description}</p>
 
-            <div className="bg-gradient-to-br rounded-3xl p-6 text-white shadow-xl bg-slate-900">
-              <p className="text-sm uppercase tracking-[0.3em] text-white/70 mb-2">
-                Key benefits
-              </p>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {selectedCard.chips.map((chip) => (
-                  <span
-                    key={chip}
-                    className="bg-white/10 px-3 py-1 rounded-full text-xs font-semibold"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {selectedSection.cards.map((cardId) => {
+                const card = engineCards[cardId];
+                return (
+                  <button
+                    key={card.id}
+                    onClick={() => handleLaunch(card.path)}
+                    className={`text-left rounded-2xl border border-slate-100 p-5 bg-gradient-to-br ${card.gradient} text-white shadow-lg hover:-translate-y-1 transition-transform`}
                   >
-                    {chip}
-                  </span>
-                ))}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-white/70">
-                  {selectedCard.details}
-                </span>
-                <button
-                  onClick={() => handleLaunch(selectedCard.path)}
-                  className="bg-white text-slate-900 px-5 py-2 rounded-2xl font-semibold hover:bg-slate-100 transition"
-                >
-                  Launch workspace
-                </button>
-              </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs uppercase tracking-wide bg-white/25 px-2 py-0.5 rounded-full font-semibold">
+                        {card.badge}
+                      </span>
+                      <span className="text-[11px] text-white/80">{card.details}</span>
+                    </div>
+                    <div className="text-xl font-semibold mb-2">{card.label}</div>
+                    <p className="text-sm text-white/80 line-clamp-3">{card.summary}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
