@@ -1,4 +1,4 @@
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { withAuth } from "../../components/withAuth";
 import AppShell from "../../components/layout/AppShell";
@@ -39,6 +39,7 @@ interface FileResult {
 
 function FullPageExtractor() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [files, setFiles] = useState<File[]>([]);
   const [results, setResults] = useState<FileResult[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -55,6 +56,17 @@ function FullPageExtractor() {
     engine === "vision"
       ? "border-emerald-500 bg-emerald-50 scale-105"
       : "border-blue-500 bg-blue-50 scale-105";
+
+  useEffect(() => {
+    const engineParam = searchParams.get("engine");
+    if (
+      engineParam &&
+      (engineParam === "vision" || engineParam === "ocrspace") &&
+      engineParam !== engine
+    ) {
+      setEngine(engineParam as FullPageEngine);
+    }
+  }, [searchParams, engine]);
 
   // Simulate upload progress
   useEffect(() => {
