@@ -19,7 +19,7 @@ function HomePageContent() {
       id: "fullpage",
       title: "Full Page OCR",
       description:
-        "Extract text from entire images with high accuracy. Perfect for documents, screenshots, and multi-page processing.",
+        "Extract text from entire images with CopyFish (OCR.Space) or switch to Google Vision for document-grade accuracy.",
       icon: (
         <svg
           className="w-8 h-8"
@@ -38,18 +38,18 @@ function HomePageContent() {
       path: "/text-extractor",
       gradient: "from-blue-500 to-cyan-500",
       features: [
+        "CopyFish / Google Vision toggle",
         "Multi-file upload",
         "Drag & drop",
-        "Batch processing",
         "Real-time preview",
       ],
-      stats: "90%-95% accuracy",
+      stats: "95%+ accuracy",
     },
     {
       id: "title",
       title: "Title & Link Extractor",
       description:
-        "AI-powered extraction of titles and URLs from search results. Perfect for research and content curation.",
+        "AI-powered extraction of titles and URLs from search results with a CopyFish or Google Vision switch per upload.",
       icon: (
         <svg
           className="w-8 h-8"
@@ -179,7 +179,7 @@ function HomePageContent() {
 
         {/* Features Grid */}
         <div className="max-w-7xl mx-auto px-4 pb-16">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 mb-16">
             {features.map((feature) => (
               <FeatureCard
                 key={feature.id}
@@ -234,18 +234,28 @@ function HomePageContent() {
                   processing needs. No credit card required.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button
-                    onClick={() => navigateTo("/text-extractor")}
-                    className="bg-white text-blue-600 hover:bg-blue-50 font-semibold py-4 px-8 rounded-2xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5"
-                  >
-                    Start with Full Page OCR
-                  </button>
-                  <button
-                    onClick={() => navigateTo("/vision-extractor")}
-                    className="border-2 border-white text-white hover:bg-white/10 font-semibold py-4 px-8 rounded-2xl transition-all duration-300 backdrop-blur-sm"
-                  >
-                    Try Google Vision Title Extractor
-                  </button>
+                  {[
+                    {
+                      label: "Launch Full Page OCR",
+                      onClick: () => navigateTo("/text-extractor"),
+                      className:
+                        "bg-white text-blue-600 hover:bg-blue-50 font-semibold",
+                    },
+                    {
+                      label: "Review Titles & Links",
+                      onClick: () => navigateTo("/title-extractor"),
+                      className:
+                        "border-2 border-white text-white hover:bg-white/10 font-semibold",
+                    },
+                  ].map((btn) => (
+                    <button
+                      key={btn.label}
+                      onClick={btn.onClick}
+                      className={`${btn.className} py-4 px-8 rounded-2xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5`}
+                    >
+                      {btn.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>

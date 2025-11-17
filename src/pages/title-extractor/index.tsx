@@ -20,7 +20,30 @@ interface FileResult {
   searchResults: SearchResult[];
   resultCount: number;
   status: "success" | "error";
+  engine: TitleEngine;
 }
+
+const titleEngineOptions = {
+  ocrspace: {
+    label: "CopyFish (OCR.Space)",
+    description: "Great for quick SERP captures and general screenshots.",
+    helperText: "OCR.Space pipeline parses text before structuring titles/URLs.",
+    maxSizeCopy: "Supports JPG, PNG, BMP • Max 10MB per file",
+    accent: "from-purple-500 to-pink-500",
+    badge: "Default",
+  },
+  vision: {
+    label: "Google Vision",
+    description: "Best for dense or multilingual SERP screenshots.",
+    helperText:
+      "Google Vision extracts the text, then we auto-parse the SERP sections.",
+    maxSizeCopy: "Supports JPG, PNG • Max 4MB per file",
+    accent: "from-emerald-500 to-sky-500",
+  },
+} as const;
+
+type TitleEngine = keyof typeof titleEngineOptions;
+const titleEngineOrder: TitleEngine[] = ["ocrspace", "vision"];
 
 function TitleExtractor() {
   const router = useRouter();
@@ -31,6 +54,16 @@ function TitleExtractor() {
   const [showError, setShowError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showGuide, setShowGuide] = useState(false);
+  const [engine, setEngine] = useState<TitleEngine>("ocrspace");
+  const activeEngine = titleEngineOptions[engine];
+  const accentIdleClasses =
+    engine === "vision"
+      ? "border-slate-300 hover:border-emerald-400 hover:bg-emerald-50"
+      : "border-slate-300 hover:border-purple-400 hover:bg-purple-50";
+  const accentActiveClasses =
+    engine === "vision"
+      ? "border-emerald-500 bg-emerald-50 scale-105"
+      : "border-purple-500 bg-purple-50 scale-105";
 
   // Simulate upload progress
   useEffect(() => {
@@ -65,6 +98,7 @@ function TitleExtractor() {
     setProcessing(true);
 
     let hasError = false;
+    const selectedEngine = engine;
 
     for (const file of files) {
       const formData = new FormData();
@@ -72,7 +106,12 @@ function TitleExtractor() {
       formData.append("language", "jpn");
 
       try {
-        const res = await fetch("/api/process-image-title", {
+        const endpoint =
+          selectedEngine === "vision"
+            ? "/api/process-image-vision"
+            : "/api/process-image-title";
+
+        const res = await fetch(endpoint, {
           method: "POST",
           body: formData,
         });
@@ -86,6 +125,7 @@ function TitleExtractor() {
             searchResults: data.searchResults || [],
             resultCount: data.resultCount || 0,
             status: data.status === "success" ? "success" : "error",
+            engine: selectedEngine,
           },
         ]);
 
@@ -101,6 +141,7 @@ function TitleExtractor() {
             searchResults: [],
             resultCount: 0,
             status: "error",
+            engine: selectedEngine,
           },
         ]);
         hasError = true;
@@ -215,11 +256,73 @@ function TitleExtractor() {
                     </p>
                   </div>
 
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Choose OCR Engine
+                      </h3>
+                      <span className="text-xs text-slate-500">
+                        CopyFish or Google Vision
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {titleEngineOrder.map((key) => {
+                        const option = titleEngineOptions[key];
+                        const isActive = engine === key;
+                        return (
+                          <button
+                            type="button"
+                            key={key}
+                            disabled={processing}
+                            onClick={() => setEngine(key)}
+                            className={`text-left rounded-2xl border px-4 py-4 transition-all ${
+                              isActive
+                                ? `bg-gradient-to-r ${option.accent} text-white shadow-lg`
+                                : "bg-white text-slate-700 hover:border-slate-300"
+                            }`}
+                            aria-pressed={isActive}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span
+                                className={`font-semibold ${
+                                  isActive ? "text-white" : "text-slate-800"
+                                }`}
+                              >
+                                {option.label}
+                              </span>
+                              {option.badge && (
+                                <span
+                                  className={`text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full ${
+                                    isActive
+                                      ? "bg-white/25 text-white"
+                                      : "bg-slate-100 text-slate-600"
+                                  }`}
+                                >
+                                  {option.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p
+                              className={`text-sm ${
+                                isActive ? "text-white/80" : "text-slate-500"
+                              }`}
+                            >
+                              {option.description}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <UploadDropzone
                     files={files}
                     processing={processing}
-                    helperText="Perfect for search result screenshots"
-                    maxSizeCopy="Supports JPG, PNG, BMP • Maximum 1MB per file"
+                    helperText={activeEngine.helperText}
+                    maxSizeCopy={activeEngine.maxSizeCopy}
+                    accentGradient={activeEngine.accent}
+                    idleClasses={accentIdleClasses}
+                    activeClasses={accentActiveClasses}
                     onFilesChange={handleFilesChange}
                     onClearWorkspace={resetWorkspace}
                     isClearDisabled={files.length === 0 && results.length === 0}
@@ -228,7 +331,7 @@ function TitleExtractor() {
                   {processing && (
                     <ProgressBar
                       value={uploadProgress}
-                      accentClass="from-purple-500 to-pink-500"
+                      accentClass={activeEngine.accent}
                     />
                   )}
 
@@ -240,7 +343,11 @@ function TitleExtractor() {
                     className={`w-full py-5 px-6 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 group/btn ${
                       processing || files.length === 0
                         ? "bg-slate-300 cursor-not-allowed text-slate-500"
-                        : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        : `bg-gradient-to-r ${
+                            engine === "vision"
+                              ? "from-emerald-600 to-sky-600 hover:from-emerald-600/90 hover:to-sky-600/90"
+                              : "from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                          } text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1`
                     }`}
                   >
                     {processing ? (
@@ -266,7 +373,7 @@ function TitleExtractor() {
                             d="M13 10V3L4 14h7v7l9-11h-7z"
                           />
                         </svg>
-                        <span>Extract Titles & Links</span>
+                        <span>Use {activeEngine.label}</span>
                       </>
                     )}
                   </button>
@@ -327,7 +434,7 @@ function TitleExtractor() {
                     <FileList
                       files={files}
                       onRemoveFile={removeFile}
-                      accentColor="purple"
+                      accentColor={engine === "vision" ? "emerald" : "purple"}
                     />
                   )}
 
@@ -421,6 +528,9 @@ function TitleExtractor() {
                               <h3 className="font-bold text-slate-800">
                                 {result.name}
                               </h3>
+                              <p className="text-xs text-slate-500">
+                                Engine: {titleEngineOptions[result.engine].label}
+                              </p>
                               <p
                                 className={`text-sm font-medium ${
                                   result.status === "error"

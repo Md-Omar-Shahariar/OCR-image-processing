@@ -8,10 +8,33 @@ import FileList from "../../components/upload/FileList";
 import ProgressBar from "../../components/ui/ProgressBar";
 import Toast from "../../components/feedback/Toast";
 
+const fullPageEngineOptions = {
+  ocrspace: {
+    label: "CopyFish (OCR.Space)",
+    description: "Fast, reliable OCR powered by OCR.Space / CopyFish.",
+    helperText: "Ideal for quick batches of documents, forms, or screenshots.",
+    maxSizeCopy: "Supports JPG, PNG, BMP • Max 10MB per file",
+    accent: "from-blue-500 to-cyan-500",
+    badge: "Default",
+  },
+  vision: {
+    label: "Google Vision",
+    description:
+      "Higher accuracy for dense layouts, columns, and multilingual text.",
+    helperText: "Harness Google Cloud Vision for premium OCR quality.",
+    maxSizeCopy: "Supports JPG, PNG • Max 4MB per file",
+    accent: "from-emerald-500 to-sky-500",
+  },
+} as const;
+
+type FullPageEngine = keyof typeof fullPageEngineOptions;
+const fullPageEngineOrder: FullPageEngine[] = ["ocrspace", "vision"];
+
 interface FileResult {
   name: string;
   text: string;
   status: "success" | "error";
+  engine: FullPageEngine;
 }
 
 function FullPageExtractor() {
@@ -22,6 +45,16 @@ function FullPageExtractor() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [engine, setEngine] = useState<FullPageEngine>("ocrspace");
+  const activeEngine = fullPageEngineOptions[engine];
+  const accentIdleClasses =
+    engine === "vision"
+      ? "border-slate-300 hover:border-emerald-400 hover:bg-emerald-50"
+      : "border-slate-300 hover:border-blue-400 hover:bg-blue-50";
+  const accentActiveClasses =
+    engine === "vision"
+      ? "border-emerald-500 bg-emerald-50 scale-105"
+      : "border-blue-500 bg-blue-50 scale-105";
 
   // Simulate upload progress
   useEffect(() => {
@@ -56,6 +89,7 @@ function FullPageExtractor() {
     setProcessing(true);
 
     let hasError = false;
+    const selectedEngine = engine;
 
     for (const file of files) {
       const formData = new FormData();
@@ -65,7 +99,12 @@ function FullPageExtractor() {
       try {
         console.log(`Uploading file: ${file.name}, size: ${file.size} bytes`);
 
-        const res = await fetch("/api/process-image", {
+        const endpoint =
+          selectedEngine === "vision"
+            ? "/api/process-fullpage-vision"
+            : "/api/process-image";
+
+        const res = await fetch(endpoint, {
           method: "POST",
           body: formData,
         });
@@ -93,6 +132,7 @@ function FullPageExtractor() {
             name: file.name,
             text: data.status === "success" ? data.text : data.message,
             status: data.status === "success" ? "success" : "error",
+            engine: selectedEngine,
           },
         ]);
 
@@ -107,6 +147,7 @@ function FullPageExtractor() {
             name: file.name,
             text: err instanceof Error ? err.message : "Error uploading file",
             status: "error",
+            engine: selectedEngine,
           },
         ]);
         hasError = true;
@@ -204,14 +245,73 @@ function FullPageExtractor() {
                     </p>
                   </div>
 
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Choose OCR Engine
+                      </h3>
+                      <span className="text-xs text-slate-500">
+                        Switch anytime
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {fullPageEngineOrder.map((key) => {
+                        const option = fullPageEngineOptions[key];
+                        const isActive = engine === key;
+                        return (
+                          <button
+                            type="button"
+                            key={key}
+                            disabled={processing}
+                            onClick={() => setEngine(key)}
+                            className={`text-left rounded-2xl border px-4 py-4 transition-all ${
+                              isActive
+                                ? `bg-gradient-to-r ${option.accent} text-white shadow-lg`
+                                : "bg-white text-slate-700 hover:border-slate-300"
+                            }`}
+                            aria-pressed={isActive}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span
+                                className={`font-semibold ${
+                                  isActive ? "text-white" : "text-slate-800"
+                                }`}
+                              >
+                                {option.label}
+                              </span>
+                              {option.badge && (
+                                <span
+                                  className={`text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full ${
+                                    isActive
+                                      ? "bg-white/25 text-white"
+                                      : "bg-slate-100 text-slate-600"
+                                  }`}
+                                >
+                                  {option.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p
+                              className={`text-sm ${
+                                isActive ? "text-white/80" : "text-slate-500"
+                              }`}
+                            >
+                              {option.description}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <UploadDropzone
                     files={files}
                     processing={processing}
-                    helperText="Perfect for documents, screenshots, and photos"
-                    maxSizeCopy="Supports JPG, PNG, BMP • Maximum 1MB per file"
-                    accentGradient="from-blue-500 to-cyan-500"
-                    idleClasses="border-slate-300 hover:border-blue-400 hover:bg-blue-50"
-                    activeClasses="border-blue-500 bg-blue-50 scale-105"
+                    helperText={activeEngine.helperText}
+                    maxSizeCopy={activeEngine.maxSizeCopy}
+                    accentGradient={activeEngine.accent}
+                    idleClasses={accentIdleClasses}
+                    activeClasses={accentActiveClasses}
                     browseLabel="Browse files"
                     onFilesChange={handleFilesChange}
                     onClearWorkspace={resetWorkspace}
@@ -221,7 +321,7 @@ function FullPageExtractor() {
                   {processing && (
                     <ProgressBar
                       value={uploadProgress}
-                      accentClass="from-blue-500 to-cyan-500"
+                      accentClass={activeEngine.accent}
                     />
                   )}
 
@@ -233,7 +333,11 @@ function FullPageExtractor() {
                     className={`w-full py-5 px-6 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 group/btn ${
                       processing || files.length === 0
                         ? "bg-slate-300 cursor-not-allowed text-slate-500"
-                        : "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        : `bg-gradient-to-r ${
+                            engine === "vision"
+                              ? "from-emerald-600 to-sky-600 hover:from-emerald-600/90 hover:to-sky-600/90"
+                              : "from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                          } text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1`
                     }`}
                   >
                     {processing ? (
@@ -259,7 +363,9 @@ function FullPageExtractor() {
                             d="M13 10V3L4 14h7v7l9-11h-7z"
                           />
                         </svg>
-                        <span>Extract Text from Images</span>
+                        <span>
+                          Use {activeEngine.label}
+                        </span>
                       </>
                     )}
                   </button>
@@ -271,7 +377,7 @@ function FullPageExtractor() {
                     <FileList
                       files={files}
                       onRemoveFile={removeFile}
-                      accentColor="blue"
+                      accentColor={engine === "vision" ? "emerald" : "blue"}
                     />
                   )}
 
@@ -361,6 +467,9 @@ function FullPageExtractor() {
                               <h3 className="font-bold text-slate-800 text-lg">
                                 {result.name}
                               </h3>
+                              <p className="text-xs text-slate-500">
+                                Engine: {fullPageEngineOptions[result.engine].label}
+                              </p>
                               <p
                                 className={`text-sm font-medium ${
                                   result.status === "error"

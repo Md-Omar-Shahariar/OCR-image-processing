@@ -1,10 +1,10 @@
 # OCR Vision Suite
 
-OCR Vision Suite is an internal-friendly toolkit built with Next.js 15 that turns screenshots into structured, copy‑ready data. It includes three specialized workflows:
+OCR Vision Suite is an internal-friendly toolkit built with Next.js 15 that turns screenshots into structured, copy‑ready data. It now ships with flexible engine switches so you can pick the right OCR per upload:
 
-- **Full Page OCR** – batch extract text from documents, PDFs, or multi-screen captures with live previews.
-- **Title & Link Extractor** – pull titles, URLs, and snippets from search result screenshots for research or content curation.
-- **Google Vision Extractor** – use Google Cloud Vision for multilingual SERP screenshots when OCR.Space struggles to detect titles, URLs, and snippets.
+- **Full Page OCR** – batch extract text from documents/PDFs with a CopyFish (OCR.Space) or Google Vision toggle.
+- **Title & Link Extractor** – pull titles, URLs, and snippets from search result screenshots using either CopyFish or Google Vision.
+- **Google Vision Extractor** – a dedicated Vision workspace for multilingual SERP screenshots when OCR.Space struggles.
 - **Red Box Scanner** – detect red-highlighted regions via OpenCV and read the enclosed text with Tesseract.js.
 
 All tools share a cohesive, responsive UI, built-in drag-and-drop uploads, toasts, and guided states to make repeated OCR tasks fast and pleasant.
@@ -46,9 +46,10 @@ src/
 │  └─ feedback/Toast.tsx          # Reusable success/error toasts
 ├─ pages/
 │  ├─ index.tsx                   # Product-style dashboard linking each tool
-│  ├─ text-extractor/index.tsx    # Full page OCR flow
-│  ├─ title-extractor/index.tsx   # Search-title/link workflow
+│  ├─ text-extractor/index.tsx    # Classic OCR.Space full page flow
+│  ├─ vision-fullpage/index.tsx   # Google Vision full page OCR flow
 │  ├─ vision-extractor/index.tsx  # Google Vision-powered title/link workflow
+│  ├─ title-extractor/index.tsx   # OCR.Space title extractor (legacy)
 │  └─ redbox/index.tsx            # Red-box CV + OCR scanner
 ├─ pages/api/                     # Image-processing endpoints (OCR.Space, Vision, OpenCV)
 └─ styles/globals.css             # Global Tailwind + animation tokens
@@ -62,15 +63,22 @@ src/
 
 Each extractor runs entirely within your session; no files are persisted after processing.
 
-## Google Vision Title Extractor (Optional)
+## Google Vision Workflows
 
-Need higher-fidelity title, URL, and snippet detection for dense SERP screenshots? Use the Vision workflow at `/vision-extractor`, powered by the `/api/process-image-vision` route:
+Need higher-fidelity extraction for dense layouts? Two Google Vision flows are available once you provide an API key:
+
+- **Title & Link mode** – UI at `/vision-extractor`, API at `/api/process-image-vision`, best for SERP screenshots (`TEXT_DETECTION`).
+- **Full Page mode** – UI at `/vision-fullpage`, API at `/api/process-fullpage-vision`, best for scans or documents (`DOCUMENT_TEXT_DETECTION`).
+
+> Tip: the standard `/text-extractor` and `/title-extractor` pages now include an engine selector so you can swap between CopyFish and Google Vision without leaving the workflow. The dedicated Vision pages remain available if you prefer a Vision-only environment.
+
+Setup steps:
 
 1. In Google Cloud Console, enable the Vision API for your project and create an API key (or restrict an existing one to Vision only).
 2. Store the key in `.env.local` under `GOOGLE_VISION_API_KEY`. Restart `npm run dev` so Next.js picks it up.
-3. Drop SERP screenshots into the Google Vision extractor UI; it calls `images:annotate` with `TEXT_DETECTION`, then feeds the cleaned text into the same `extractSearchResults` helper as the OCR.Space workflow.
+3. Drop screenshots into the respective Vision workflow—each route calls `images:annotate` with the feature type listed above, then either parses titles/links or normalizes the full transcript.
 
-If you need to tweak the Vision payload, update `src/pages/api/process-image-vision.ts`—the core request looks like:
+If you need to tweak the Vision payload, update `src/pages/api/process-image-vision.ts` or `src/pages/api/process-fullpage-vision.ts`—the core request looks like:
 
 ```ts
 await fetch(
