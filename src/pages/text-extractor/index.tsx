@@ -7,6 +7,7 @@ import UploadDropzone from "../../components/upload/UploadDropzone";
 import FileList from "../../components/upload/FileList";
 import ProgressBar from "../../components/ui/ProgressBar";
 import Toast from "../../components/feedback/Toast";
+import { getThemeNameFromEngine, themeColors } from "@/lib/theme";
 
 const fullPageEngineOptions = {
   ocrspace: {
@@ -14,7 +15,7 @@ const fullPageEngineOptions = {
     description: "Fast, reliable OCR powered by OCR.Space / CopyFish.",
     helperText: "Ideal for quick batches of documents, forms, or screenshots.",
     maxSizeCopy: "Supports JPG, PNG, BMP • Max 10MB per file",
-    accent: "from-blue-500 to-cyan-500",
+    accent: themeColors.copyfish.dropzoneAccent,
     badge: "Default",
   },
   vision: {
@@ -23,7 +24,7 @@ const fullPageEngineOptions = {
       "Higher accuracy for dense layouts, columns, and multilingual text.",
     helperText: "Harness Google Cloud Vision for premium OCR quality.",
     maxSizeCopy: "Supports JPG, PNG • Max 4MB per file",
-    accent: "from-emerald-500 to-sky-500",
+    accent: themeColors.vision.dropzoneAccent,
   },
 } as const;
 
@@ -47,14 +48,19 @@ function FullPageExtractor() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [engine, setEngine] = useState<FullPageEngine>("ocrspace");
   const activeEngine = fullPageEngineOptions[engine];
-  const accentIdleClasses =
-    engine === "vision"
-      ? "border-slate-300 hover:border-emerald-400 hover:bg-emerald-50"
-      : "border-slate-300 hover:border-blue-400 hover:bg-blue-50";
-  const accentActiveClasses =
-    engine === "vision"
-      ? "border-emerald-500 bg-emerald-50 scale-105"
-      : "border-blue-500 bg-blue-50 scale-105";
+  const themeKey = getThemeNameFromEngine(engine);
+  const theme = themeColors[themeKey];
+  const accentIdleClasses = theme.dropzoneIdle;
+  const accentActiveClasses = theme.dropzoneActive;
+  const pageGradient = theme.pageGradient;
+  const headerGradient = theme.headerGradient;
+  const primaryButtonGradient = theme.buttonGradient;
+  const tipsCardClasses = {
+    wrapper: theme.tipsWrapper,
+    title: theme.tipsTitle,
+    bullet: theme.tipsBullet,
+    text: theme.tipsText,
+  };
 
   useEffect(() => {
     const engineParam = searchParams.get("engine");
@@ -207,7 +213,7 @@ function FullPageExtractor() {
   };
 
   return (
-    <AppShell gradient="bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+    <AppShell gradient={pageGradient}>
       <div className="relative z-10">
         {/* Header */}
         <div className="max-w-6xl mx-auto px-4 pt-8 pb-4">
@@ -224,7 +230,7 @@ function FullPageExtractor() {
           {/* Main Card */}
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden mb-8">
             {/* Header Section */}
-            <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-8 relative overflow-hidden">
+            <div className={`${headerGradient} p-8 relative overflow-hidden`}>
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
 
@@ -273,7 +279,7 @@ function FullPageExtractor() {
                     processing={processing}
                     helperText={activeEngine.helperText}
                     maxSizeCopy={activeEngine.maxSizeCopy}
-                    accentGradient={activeEngine.accent}
+                    accentGradient={theme.dropzoneAccent}
                     idleClasses={accentIdleClasses}
                     activeClasses={accentActiveClasses}
                     browseLabel="Browse files"
@@ -285,7 +291,7 @@ function FullPageExtractor() {
                   {processing && (
                     <ProgressBar
                       value={uploadProgress}
-                      accentClass={activeEngine.accent}
+                      accentClass={theme.dropzoneAccent}
                     />
                   )}
 
@@ -297,11 +303,7 @@ function FullPageExtractor() {
                     className={`w-full py-5 px-6 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 group/btn ${
                       processing || files.length === 0
                         ? "bg-slate-300 cursor-not-allowed text-slate-500"
-                        : `bg-gradient-to-r ${
-                            engine === "vision"
-                              ? "from-emerald-600 to-sky-600 hover:from-emerald-600/90 hover:to-sky-600/90"
-                              : "from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-                          } text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1`
+                        : `bg-gradient-to-r ${primaryButtonGradient} text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1`
                     }`}
                   >
                     {processing ? (
@@ -341,13 +343,15 @@ function FullPageExtractor() {
                     <FileList
                       files={files}
                       onRemoveFile={removeFile}
-                      accentColor={engine === "vision" ? "emerald" : "blue"}
+                      accentColor={theme.fileListAccent ?? "blue"}
                     />
                   )}
 
                   {/* Tips Card */}
-                  <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl p-6 border border-cyan-200">
-                    <h4 className="font-semibold text-cyan-800 mb-3 flex items-center space-x-2">
+                  <div className={tipsCardClasses.wrapper}>
+                    <h4
+                      className={`font-semibold ${tipsCardClasses.title} mb-3 flex items-center space-x-2`}
+                    >
                       <svg
                         className="w-5 h-5"
                         fill="none"
@@ -363,13 +367,17 @@ function FullPageExtractor() {
                       </svg>
                       <span>Best Practices</span>
                     </h4>
-                    <ul className="space-y-2 text-sm text-cyan-700">
+                    <ul className={`space-y-2 text-sm ${tipsCardClasses.text}`}>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${tipsCardClasses.bullet} rounded-full`}
+                        ></div>
                         <span>Use high-quality, clear images</span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${tipsCardClasses.bullet} rounded-full`}
+                        ></div>
                         <span>Ensure text is readable and not blurry</span>
                       </li>
                       <li className="flex items-center space-x-2">
@@ -471,7 +479,10 @@ function FullPageExtractor() {
                               onClick={() =>
                                 downloadText(result.text, result.name)
                               }
-                              className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 group/download"
+                              className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 group/download ${
+                                themeColors[getThemeNameFromEngine(result.engine)].downloadButton ??
+                                "bg-blue-100 hover:bg-blue-200 text-blue-700"
+                              }`}
                             >
                               <svg
                                 className="w-4 h-4 group-hover/download:scale-110 transition-transform"

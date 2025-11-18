@@ -1,10 +1,12 @@
+type AccentColor = "purple" | "blue" | "emerald";
+
 interface FileListProps {
   files: File[];
   onRemoveFile: (index: number) => void;
-  accentColor?: "purple" | "blue";
+  accentColor?: AccentColor;
 }
 
-const accentClasses = {
+const accentClasses: Record<AccentColor, { badge: string; iconBg: string }> = {
   purple: {
     badge: "bg-purple-100 text-purple-600",
     iconBg: "bg-purple-100 text-purple-600",
@@ -12,6 +14,10 @@ const accentClasses = {
   blue: {
     badge: "bg-blue-100 text-blue-600",
     iconBg: "bg-blue-100 text-blue-600",
+  },
+  emerald: {
+    badge: "bg-emerald-100 text-emerald-600",
+    iconBg: "bg-emerald-100 text-emerald-600",
   },
 };
 

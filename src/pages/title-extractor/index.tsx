@@ -7,6 +7,7 @@ import UploadDropzone from "../../components/upload/UploadDropzone";
 import FileList from "../../components/upload/FileList";
 import ProgressBar from "../../components/ui/ProgressBar";
 import Toast from "../../components/feedback/Toast";
+import { getThemeNameFromEngine, themeColors } from "@/lib/theme";
 
 interface SearchResult {
   title: string;
@@ -29,7 +30,7 @@ const titleEngineOptions = {
     description: "Great for quick SERP captures and general screenshots.",
     helperText: "OCR.Space pipeline parses text before structuring titles/URLs.",
     maxSizeCopy: "Supports JPG, PNG, BMP • Max 10MB per file",
-    accent: "from-purple-500 to-pink-500",
+    accent: themeColors.copyfish.dropzoneAccent,
     badge: "Default",
   },
   vision: {
@@ -38,7 +39,7 @@ const titleEngineOptions = {
     helperText:
       "Google Vision extracts the text, then we auto-parse the SERP sections.",
     maxSizeCopy: "Supports JPG, PNG • Max 4MB per file",
-    accent: "from-emerald-500 to-sky-500",
+    accent: themeColors.vision.dropzoneAccent,
   },
 } as const;
 
@@ -56,14 +57,10 @@ function TitleExtractor() {
   const [showGuide, setShowGuide] = useState(false);
   const [engine, setEngine] = useState<TitleEngine>("ocrspace");
   const activeEngine = titleEngineOptions[engine];
-  const accentIdleClasses =
-    engine === "vision"
-      ? "border-slate-300 hover:border-emerald-400 hover:bg-emerald-50"
-      : "border-slate-300 hover:border-purple-400 hover:bg-purple-50";
-  const accentActiveClasses =
-    engine === "vision"
-      ? "border-emerald-500 bg-emerald-50 scale-105"
-      : "border-purple-500 bg-purple-50 scale-105";
+  const themeKey = getThemeNameFromEngine(engine);
+  const theme = themeColors[themeKey];
+  const accentIdleClasses = theme.dropzoneIdle;
+  const accentActiveClasses = theme.dropzoneActive;
 
   useEffect(() => {
     const engineParam = searchParams.get("engine");
@@ -189,7 +186,7 @@ function TitleExtractor() {
   };
 
   return (
-    <AppShell gradient="bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+    <AppShell gradient={theme.pageGradient}>
       <div className="relative z-10">
         {/* Header */}
         <div className="max-w-6xl mx-auto px-4 pt-8 pb-4">
@@ -206,7 +203,7 @@ function TitleExtractor() {
           {/* Main Card */}
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden mb-8">
             {/* Header Section */}
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-8 relative overflow-hidden">
+            <div className={`${theme.headerGradient} p-8 relative overflow-hidden`}>
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
 
@@ -284,7 +281,7 @@ function TitleExtractor() {
                     processing={processing}
                     helperText={activeEngine.helperText}
                     maxSizeCopy={activeEngine.maxSizeCopy}
-                    accentGradient={activeEngine.accent}
+                    accentGradient={theme.dropzoneAccent}
                     idleClasses={accentIdleClasses}
                     activeClasses={accentActiveClasses}
                     onFilesChange={handleFilesChange}
@@ -295,7 +292,7 @@ function TitleExtractor() {
                   {processing && (
                     <ProgressBar
                       value={uploadProgress}
-                      accentClass={activeEngine.accent}
+                      accentClass={theme.dropzoneAccent}
                     />
                   )}
 
@@ -307,11 +304,7 @@ function TitleExtractor() {
                     className={`w-full py-5 px-6 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 group/btn ${
                       processing || files.length === 0
                         ? "bg-slate-300 cursor-not-allowed text-slate-500"
-                        : `bg-gradient-to-r ${
-                            engine === "vision"
-                              ? "from-emerald-600 to-sky-600 hover:from-emerald-600/90 hover:to-sky-600/90"
-                              : "from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                          } text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1`
+                        : `bg-gradient-to-r ${theme.buttonGradient} text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1`
                     }`}
                   >
                     {processing ? (
@@ -398,13 +391,15 @@ function TitleExtractor() {
                     <FileList
                       files={files}
                       onRemoveFile={removeFile}
-                      accentColor={engine === "vision" ? "emerald" : "purple"}
+                      accentColor={theme.fileListAccent ?? "blue"}
                     />
                   )}
 
                   {/* Tips Card */}
-                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border border-blue-200">
-                    <h4 className="font-semibold text-blue-800 mb-3 flex items-center space-x-2">
+                  <div className={theme.tipsWrapper}>
+                    <h4
+                      className={`font-semibold ${theme.tipsTitle} mb-3 flex items-center space-x-2`}
+                    >
                       <svg
                         className="w-5 h-5"
                         fill="none"
@@ -420,17 +415,23 @@ function TitleExtractor() {
                       </svg>
                       <span>Pro Tips</span>
                     </h4>
-                    <ul className="space-y-2 text-sm text-blue-700">
+                    <ul className={`space-y-2 text-sm ${theme.tipsText}`}>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}
+                        ></div>
                         <span>Use clear screenshots of search results</span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}
+                        ></div>
                         <span>Ensure text is readable and not blurry</span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}
+                        ></div>
                         <span>Multiple images processed simultaneously</span>
                       </li>
                     </ul>
@@ -679,9 +680,13 @@ function TitleExtractor() {
           {/* Empty State */}
           {!processing && results.length === 0 && files.length === 0 && (
             <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 p-8 sm:p-12 text-center">
-              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-3xl flex items-center justify-center">
+              <div
+                className={`w-24 h-24 mx-auto mb-6 bg-gradient-to-r ${theme.dropzoneAccent} rounded-3xl flex items-center justify-center`}
+              >
                 <svg
-                  className="w-12 h-12 text-purple-600"
+                  className={`w-12 h-12 ${
+                    themeKey === "vision" ? "text-emerald-600" : "text-pink-600"
+                  }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

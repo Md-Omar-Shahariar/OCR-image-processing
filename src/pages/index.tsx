@@ -45,7 +45,7 @@ function HomePageContent() {
       id: "full-copyfish",
       label: "Full Page · CopyFish",
       summary: "Use OCR.Space / CopyFish for fast, generous 10MB batches.",
-      gradient: "from-indigo-600 via-blue-500 to-cyan-400",
+      gradient: "from-purple-600 via-pink-500 to-rose-500",
       path: "/text-extractor?engine=ocrspace",
       badge: "CopyFish",
       details: "Engine 2 • Multi-file batching",
@@ -183,12 +183,13 @@ function HomePageContent() {
         </div>
 
         {/* Engine Selector Albums */}
-        <div className="max-w-7xl mx-auto px-4 pb-16 space-y-12">
-          {workflowSections.map((section) => (
-            <div
-              key={section.id}
-              className="bg-white/85 backdrop-blur-md rounded-3xl shadow-xl border border-white/60 p-6 sm:p-8"
-            >
+        <div className="max-w-7xl mx-auto px-4 pb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {workflowSections.map((section) => (
+              <div
+                key={section.id}
+                className="bg-white/85 backdrop-blur-md rounded-3xl shadow-xl border border-white/60 p-6 sm:p-8"
+              >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.4em] text-slate-400">
@@ -247,9 +248,10 @@ function HomePageContent() {
                 })}
               </div>
             </div>
-          ))}
+            ))}
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
             {secondaryFeatures.map((feature) => (
               <FeatureCard
                 key={feature.id}
@@ -262,35 +264,6 @@ function HomePageContent() {
             ))}
           </div>
 
-          {/* CTA Section */}
-          <div className="text-center">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl shadow-2xl p-12 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-black/5"></div>
-              <div className="relative z-10">
-                <h2 className="text-3xl font-bold text-white mb-4">
-                  Ready to Transform Your Images?
-                </h2>
-                <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
-                  Join thousands of users who trust our tools for their image
-                  processing needs. No credit card required.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button
-                    onClick={() => handleLaunch(engineCards["full-copyfish"].path)}
-                    className="bg-white text-blue-600 hover:bg-blue-50 font-semibold py-4 px-8 rounded-2xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5"
-                  >
-                    Launch Full Page OCR
-                  </button>
-                  <button
-                    onClick={() => handleLaunch(engineCards["title-copyfish"].path)}
-                    className="border-2 border-white text-white hover:bg-white/10 font-semibold py-4 px-8 rounded-2xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5"
-                  >
-                    Review Titles & Links
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
