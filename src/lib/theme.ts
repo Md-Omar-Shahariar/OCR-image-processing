@@ -55,6 +55,7 @@ export const themeColors: Record<ThemeName, ThemeConfig> = {
     tipsTitle: "text-red-800",
     tipsBullet: "bg-red-500",
     tipsText: "text-red-700",
+    downloadButton: "bg-red-100 hover:bg-red-200 text-red-700",
   },
 };
 

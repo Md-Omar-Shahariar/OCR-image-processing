@@ -41,6 +41,55 @@ function RedBoxScanner() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const theme = themeColors.redfox;
+  const downloadTextFile = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadBoxResult = (result: OCRResult, index: number) => {
+    const content = [
+      `Box ${index + 1}`,
+      `Text: ${result.text || "No text"}`,
+      `Position: X${result.box.x}, Y${result.box.y}`,
+      `Size: ${result.box.width}x${result.box.height}px`,
+      result.confidence
+        ? `Confidence: ${Math.round(result.confidence)}%`
+        : undefined,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    downloadTextFile(content, `redbox_${index + 1}.txt`);
+  };
+
+  const downloadAllResults = () => {
+    if (results.length === 0) {
+      return;
+    }
+    const content = results
+      .map((result, index) => {
+        const lines = [
+          `Box ${index + 1}`,
+          `Text: ${result.text || "No text"}`,
+          `Position: X${result.box.x}, Y${result.box.y}`,
+          `Size: ${result.box.width}x${result.box.height}px`,
+          result.confidence
+            ? `Confidence: ${Math.round(result.confidence)}%`
+            : undefined,
+        ];
+        return lines.filter(Boolean).join("\n");
+      })
+      .join("\n\n");
+    downloadTextFile(content, `redbox_results.txt`);
+  };
+  const downloadButtonClass =
+    theme.downloadButton || "bg-red-100 hover:bg-red-200 text-red-700";
 
   const goHome = () => {
     router.push("/");
@@ -750,16 +799,37 @@ function RedBoxScanner() {
 
               {/* Text Results Panel */}
               <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6">
-                  <div className="flex items-center justify-between">
+                <div className={`bg-gradient-to-r from-green-600 to-emerald-600 p-6`}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-bold text-white flex items-center space-x-3">
                       <span>📋 Extracted Text</span>
                     </h2>
                     {results.length > 0 && (
-                      <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-                        <span className="text-white font-semibold text-sm">
-                          {results.length} box{results.length > 1 ? "es" : ""}
-                        </span>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                          <span className="text-white font-semibold text-sm">
+                            {results.length} box{results.length > 1 ? "es" : ""}
+                          </span>
+                        </div>
+                        <button
+                          onClick={downloadAllResults}
+                          className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-semibold ${downloadButtonClass}`}
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 5v14m0 0l-4-4m4 4l4-4"
+                            />
+                          </svg>
+                          <span>Download all</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -790,25 +860,46 @@ function RedBoxScanner() {
                                 )}
                               </div>
                             </div>
-                            <button
-                              onClick={() => copyToClipboard(result.text)}
-                              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() => copyToClipboard(result.text)}
+                                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                />
-                              </svg>
-                              <span>Copy</span>
-                            </button>
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                  />
+                                </svg>
+                                <span>Copy</span>
+                              </button>
+                              <button
+                                onClick={() => downloadBoxResult(result, index)}
+                                className={`inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-semibold ${downloadButtonClass}`}
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 5v14m0 0l-4-4m4 4l4-4"
+                                  />
+                                </svg>
+                                <span>Download</span>
+                              </button>
+                            </div>
                           </div>
 
                           <div className="bg-white rounded-xl p-4 border border-slate-200">

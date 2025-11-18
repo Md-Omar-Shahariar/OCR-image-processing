@@ -33,52 +33,66 @@ export function extractSearchResults(text: string): SearchResult[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    const urlMatch = line.match(
-      /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?(?:\/[^\s]*)?)/
-    );
+    const urlMatch = line.match(/https?:\/\/[^\s]+/);
 
     if (urlMatch) {
-      const lineParts = line.split(" ");
+      const lineParts = line.split(/\s+/);
       const urlIndex = lineParts.findIndex((part) =>
         part.includes(urlMatch[0])
       );
+      const firstToken = lineParts[0] || "";
+      const tokenIsMarker =
+        /^[^\w一-龯ぁ-んァ-ン]+$/.test(firstToken) ||
+        /^([\(\[]?[A-Za-z]{1,3}[\)\]]?)$/.test(firstToken);
 
-      isUrlLine = urlIndex === 0;
+      isUrlLine = urlIndex === 0 || (urlIndex === 1 && tokenIsMarker);
 
       if (isUrlLine) {
         const url = urlMatch[0];
 
         let title = "";
         let description = "";
+        let titleLineIndex = -1;
 
-        if (i + 1 < lines.length) {
-          const potentialTitle = lines[i + 1];
+        for (let j = i + 1; j < lines.length; j++) {
+          const candidate = lines[j];
 
           if (
-            potentialTitle &&
-            potentialTitle.length >= 2 &&
-            potentialTitle.length < 300 &&
-            !potentialTitle.match(/https?:\/\//) &&
-            !potentialTitle.match(/^[0-9\s\.-]+$/)
+            !candidate ||
+            /^[^\w一-龯ぁ-んァ-ン]+$/.test(candidate) ||
+            candidate.match(/https?:\/\//) ||
+            candidate.match(/^[0-9\s\.-]+$/)
           ) {
-            title = potentialTitle;
+            continue;
+          }
 
-            const descriptionLines: string[] = [];
+          if (candidate.length >= 2 && candidate.length < 300) {
+            title = candidate;
+            titleLineIndex = j;
+            break;
+          }
+        }
 
-            for (let j = i + 2; j <= i + 3 && j < lines.length; j++) {
-              const descLine = lines[j];
-              if (
-                descLine &&
-                descLine.length > 3 &&
-                !descLine.match(/https?:\/\//)
-              ) {
-                descriptionLines.push(descLine);
-              }
+        if (title && titleLineIndex !== -1) {
+          const descriptionLines: string[] = [];
+
+          for (
+            let j = titleLineIndex + 1;
+            j <= titleLineIndex + 2 && j < lines.length;
+            j++
+          ) {
+            const descLine = lines[j];
+            if (
+              descLine &&
+              descLine.length > 3 &&
+              !descLine.match(/https?:\/\//)
+            ) {
+              descriptionLines.push(descLine);
             }
+          }
 
-            if (descriptionLines.length > 0) {
-              description = descriptionLines.join(" ");
-            }
+          if (descriptionLines.length > 0) {
+            description = descriptionLines.join(" ");
           }
         }
 
