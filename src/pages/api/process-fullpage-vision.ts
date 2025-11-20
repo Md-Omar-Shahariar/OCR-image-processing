@@ -4,7 +4,6 @@ import {
   runVisionOCR,
   VISION_MAX_FILE_SIZE,
 } from "@/lib/googleVision";
-import { cleanText, extractSearchResults } from "@/lib/searchResults";
 import { ApiResponse } from "@/types/type";
 import { NextApiRequest, NextApiResponse } from "next";
 
@@ -14,6 +13,14 @@ export const config = {
     responseLimit: "10mb",
   },
 };
+
+function normalizeFullPageText(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -55,29 +62,29 @@ export default async function handler(
 
     const language = fields.language || DEFAULT_VISION_LANGUAGE;
 
-    const rawText = await runVisionOCR(fileBuffer, language);
-    const cleanedText = cleanText(rawText);
-    const searchResults = extractSearchResults(cleanedText);
+    const rawText = await runVisionOCR(
+      fileBuffer,
+      language,
+      "DOCUMENT_TEXT_DETECTION"
+    );
+    const text = normalizeFullPageText(rawText);
 
     return res.status(200).json({
       status: "success",
-      text: cleanedText,
+      text,
       rawText,
-      searchResults,
-      resultCount: searchResults.length,
-      resultsCount: searchResults.length,
     });
-  } catch (error: unknown) {
-    const errorMessage =
+  } catch (error) {
+    const message =
       error instanceof Error
         ? error.message
         : "An unexpected error occurred while processing your image.";
 
-    let userMessage = errorMessage;
-    if (errorMessage.includes("not configured")) {
+    let userMessage = message;
+    if (message.includes("not configured")) {
       userMessage =
         "Google Vision API key missing. Ask an admin to configure it.";
-    } else if (errorMessage.includes("Vision API request failed")) {
+    } else if (message.includes("Vision API request failed")) {
       userMessage = "Vision API rejected the request. Please retry shortly.";
     }
 

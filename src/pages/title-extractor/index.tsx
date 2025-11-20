@@ -1,4 +1,4 @@
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { withAuth } from "../../components/withAuth";
 import AppShell from "../../components/layout/AppShell";
@@ -7,6 +7,7 @@ import UploadDropzone from "../../components/upload/UploadDropzone";
 import FileList from "../../components/upload/FileList";
 import ProgressBar from "../../components/ui/ProgressBar";
 import Toast from "../../components/feedback/Toast";
+import { getThemeNameFromEngine, themeColors } from "@/lib/theme";
 
 interface SearchResult {
   title: string;
@@ -20,10 +21,33 @@ interface FileResult {
   searchResults: SearchResult[];
   resultCount: number;
   status: "success" | "error";
+  engine: TitleEngine;
 }
+
+const titleEngineOptions = {
+  ocrspace: {
+    label: "CopyFish (OCR.Space)",
+    description: "Great for quick SERP captures and general screenshots.",
+    helperText: "OCR.Space pipeline parses text before structuring titles/URLs.",
+    maxSizeCopy: "Supports JPG, PNG, BMP • Max 10MB per file",
+    accent: themeColors.copyfish.dropzoneAccent,
+    badge: "Default",
+  },
+  vision: {
+    label: "Google Vision",
+    description: "Best for dense or multilingual SERP screenshots.",
+    helperText:
+      "Google Vision extracts the text, then we auto-parse the SERP sections.",
+    maxSizeCopy: "Supports JPG, PNG • Max 4MB per file",
+    accent: themeColors.vision.dropzoneAccent,
+  },
+} as const;
+
+type TitleEngine = keyof typeof titleEngineOptions;
 
 function TitleExtractor() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [files, setFiles] = useState<File[]>([]);
   const [results, setResults] = useState<FileResult[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -31,6 +55,21 @@ function TitleExtractor() {
   const [showError, setShowError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showGuide, setShowGuide] = useState(false);
+  const [engine, setEngine] = useState<TitleEngine>("ocrspace");
+  const activeEngine = titleEngineOptions[engine];
+  const themeKey = getThemeNameFromEngine(engine);
+  const theme = themeColors[themeKey];
+  const accentIdleClasses = theme.dropzoneIdle;
+  const accentActiveClasses = theme.dropzoneActive;
+
+  useEffect(() => {
+    const engineParam = searchParams.get("engine");
+    if (engineParam === "vision" || engineParam === "ocrspace") {
+      setEngine(engineParam);
+    } else {
+      setEngine("ocrspace");
+    }
+  }, [searchParams]);
 
   // Simulate upload progress
   useEffect(() => {
@@ -65,6 +104,7 @@ function TitleExtractor() {
     setProcessing(true);
 
     let hasError = false;
+    const selectedEngine = engine;
 
     for (const file of files) {
       const formData = new FormData();
@@ -72,7 +112,12 @@ function TitleExtractor() {
       formData.append("language", "jpn");
 
       try {
-        const res = await fetch("/api/process-image-title", {
+        const endpoint =
+          selectedEngine === "vision"
+            ? "/api/process-image-vision"
+            : "/api/process-image-title";
+
+        const res = await fetch(endpoint, {
           method: "POST",
           body: formData,
         });
@@ -86,6 +131,7 @@ function TitleExtractor() {
             searchResults: data.searchResults || [],
             resultCount: data.resultCount || 0,
             status: data.status === "success" ? "success" : "error",
+            engine: selectedEngine,
           },
         ]);
 
@@ -101,6 +147,7 @@ function TitleExtractor() {
             searchResults: [],
             resultCount: 0,
             status: "error",
+            engine: selectedEngine,
           },
         ]);
         hasError = true;
@@ -138,8 +185,54 @@ function TitleExtractor() {
     navigator.clipboard.writeText(text);
   };
 
+  const downloadButtonClass =
+    theme.downloadButton || "bg-blue-100 hover:bg-blue-200 text-blue-700";
+
+  const sanitizeFilename = (name: string) => {
+    const base = name.replace(/\.[^/.]+$/, "");
+    const cleaned = base.replace(/[^\w\-]+/g, "_");
+    return cleaned || "result";
+  };
+
+  const downloadTextFile = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const buildResultContent = (result: FileResult) => {
+    if (result.searchResults.length > 0) {
+      return result.searchResults
+        .map((entry, idx) => {
+          const lines = [
+            `Result ${idx + 1}`,
+            `Title: ${entry.title}`,
+            `URL: ${entry.url}`,
+          ];
+          if (entry.description) {
+            lines.push(`Description: ${entry.description}`);
+          }
+          return lines.join("\n");
+        })
+        .join("\n\n");
+    }
+    return result.text || "No text extracted.";
+  };
+
+  const downloadResultFile = (result: FileResult) => {
+    const content = buildResultContent(result);
+    const filename = `${sanitizeFilename(result.name)}_${result.engine}_results.txt`;
+    downloadTextFile(content, filename);
+  };
+
   return (
-    <AppShell gradient="bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+    <AppShell gradient={theme.pageGradient}>
       <div className="relative z-10">
         {/* Header */}
         <div className="max-w-6xl mx-auto px-4 pt-8 pb-4">
@@ -156,7 +249,7 @@ function TitleExtractor() {
           {/* Main Card */}
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden mb-8">
             {/* Header Section */}
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-8 relative overflow-hidden">
+            <div className={`${theme.headerGradient} p-8 relative overflow-hidden`}>
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
 
@@ -215,11 +308,28 @@ function TitleExtractor() {
                     </p>
                   </div>
 
+                  <div className="mb-6 flex items-center justify-between border border-slate-200 rounded-2xl p-4 bg-slate-50">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                        Active engine
+                      </p>
+                      <p className="text-lg font-semibold text-slate-800">
+                        {activeEngine.label}
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-600">
+                      Preselected on home
+                    </span>
+                  </div>
+
                   <UploadDropzone
                     files={files}
                     processing={processing}
-                    helperText="Perfect for search result screenshots"
-                    maxSizeCopy="Supports JPG, PNG, BMP • Maximum 1MB per file"
+                    helperText={activeEngine.helperText}
+                    maxSizeCopy={activeEngine.maxSizeCopy}
+                    accentGradient={theme.dropzoneAccent}
+                    idleClasses={accentIdleClasses}
+                    activeClasses={accentActiveClasses}
                     onFilesChange={handleFilesChange}
                     onClearWorkspace={resetWorkspace}
                     isClearDisabled={files.length === 0 && results.length === 0}
@@ -228,7 +338,7 @@ function TitleExtractor() {
                   {processing && (
                     <ProgressBar
                       value={uploadProgress}
-                      accentClass="from-purple-500 to-pink-500"
+                      accentClass={theme.dropzoneAccent}
                     />
                   )}
 
@@ -240,7 +350,7 @@ function TitleExtractor() {
                     className={`w-full py-5 px-6 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 group/btn ${
                       processing || files.length === 0
                         ? "bg-slate-300 cursor-not-allowed text-slate-500"
-                        : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        : `bg-gradient-to-r ${theme.buttonGradient} text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1`
                     }`}
                   >
                     {processing ? (
@@ -266,7 +376,7 @@ function TitleExtractor() {
                             d="M13 10V3L4 14h7v7l9-11h-7z"
                           />
                         </svg>
-                        <span>Extract Titles & Links</span>
+                        <span>Use {activeEngine.label}</span>
                       </>
                     )}
                   </button>
@@ -327,13 +437,15 @@ function TitleExtractor() {
                     <FileList
                       files={files}
                       onRemoveFile={removeFile}
-                      accentColor="purple"
+                      accentColor={theme.fileListAccent ?? "blue"}
                     />
                   )}
 
                   {/* Tips Card */}
-                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border border-blue-200">
-                    <h4 className="font-semibold text-blue-800 mb-3 flex items-center space-x-2">
+                  <div className={theme.tipsWrapper}>
+                    <h4
+                      className={`font-semibold ${theme.tipsTitle} mb-3 flex items-center space-x-2`}
+                    >
                       <svg
                         className="w-5 h-5"
                         fill="none"
@@ -349,17 +461,23 @@ function TitleExtractor() {
                       </svg>
                       <span>Pro Tips</span>
                     </h4>
-                    <ul className="space-y-2 text-sm text-blue-700">
+                    <ul className={`space-y-2 text-sm ${theme.tipsText}`}>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}
+                        ></div>
                         <span>Use clear screenshots of search results</span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}
+                        ></div>
                         <span>Ensure text is readable and not blurry</span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}
+                        ></div>
                         <span>Multiple images processed simultaneously</span>
                       </li>
                     </ul>
@@ -421,6 +539,9 @@ function TitleExtractor() {
                               <h3 className="font-bold text-slate-800">
                                 {result.name}
                               </h3>
+                              <p className="text-xs text-slate-500">
+                                Engine: {titleEngineOptions[result.engine].label}
+                              </p>
                               <p
                                 className={`text-sm font-medium ${
                                   result.status === "error"
@@ -438,6 +559,46 @@ function TitleExtractor() {
                               </p>
                             </div>
                           </div>
+                      <div className="flex flex-wrap gap-2 sm:justify-end">
+                        <button
+                          onClick={() => copyToClipboard(buildResultContent(result))}
+                          className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            />
+                          </svg>
+                          <span>Copy</span>
+                        </button>
+                        <button
+                          onClick={() => downloadResultFile(result)}
+                          className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-semibold ${downloadButtonClass}`}
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 5v14m0 0l-4-4m4 4l4-4"
+                            />
+                          </svg>
+                          <span>Download</span>
+                        </button>
+                      </div>
                         </div>
 
                         {/* Search Results */}
@@ -547,25 +708,46 @@ function TitleExtractor() {
                               We couldn&apos;t find any titles with URLs in this
                               image.
                             </p>
-                            <button
-                              onClick={() => copyToClipboard(result.text)}
-                              className="inline-flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition-colors"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                            <div className="flex flex-wrap gap-3 justify-center">
+                              <button
+                                onClick={() => copyToClipboard(result.text)}
+                                className="inline-flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition-colors"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                />
-                              </svg>
-                              <span>Copy extracted text</span>
-                            </button>
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                  />
+                                </svg>
+                                <span>Copy extracted text</span>
+                              </button>
+                              <button
+                                onClick={() => downloadResultFile(result)}
+                                className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-semibold ${downloadButtonClass}`}
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 5v14m0 0l-4-4m4 4l4-4"
+                                  />
+                                </svg>
+                                <span>Download text</span>
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div className="bg-red-50 rounded-xl p-4 border border-red-200">
@@ -605,9 +787,13 @@ function TitleExtractor() {
           {/* Empty State */}
           {!processing && results.length === 0 && files.length === 0 && (
             <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 p-8 sm:p-12 text-center">
-              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-3xl flex items-center justify-center">
+              <div
+                className={`w-24 h-24 mx-auto mb-6 bg-gradient-to-r ${theme.dropzoneAccent} rounded-3xl flex items-center justify-center`}
+              >
                 <svg
-                  className="w-12 h-12 text-purple-600"
+                  className={`w-12 h-12 ${
+                    themeKey === "vision" ? "text-emerald-600" : "text-pink-600"
+                  }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

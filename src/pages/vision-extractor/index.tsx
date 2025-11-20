@@ -138,6 +138,52 @@ function VisionExtractor() {
     navigator.clipboard.writeText(text);
   };
 
+  const downloadButtonClass =
+    "bg-emerald-100 hover:bg-emerald-200 text-emerald-700";
+
+  const sanitizeFilename = (name: string) => {
+    const base = name.replace(/\.[^/.]+$/, "");
+    const cleaned = base.replace(/[^\w\-]+/g, "_");
+    return cleaned || "result";
+  };
+
+  const downloadTextFile = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const buildResultContent = (result: FileResult) => {
+    if (result.searchResults.length > 0) {
+      return result.searchResults
+        .map((entry, idx) => {
+          const lines = [
+            `Result ${idx + 1}`,
+            `Title: ${entry.title}`,
+            `URL: ${entry.url}`,
+          ];
+          if (entry.description) {
+            lines.push(`Description: ${entry.description}`);
+          }
+          return lines.join("\n");
+        })
+        .join("\n\n");
+    }
+    return result.text || "No text extracted.";
+  };
+
+  const downloadResultFile = (result: FileResult) => {
+    const content = buildResultContent(result);
+    const filename = `${sanitizeFilename(result.name)}_vision_results.txt`;
+    downloadTextFile(content, filename);
+  };
+
   return (
     <AppShell gradient="bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
       <div className="relative z-10">
@@ -430,6 +476,46 @@ function VisionExtractor() {
                               </p>
                             </div>
                           </div>
+                          <div className="flex flex-wrap gap-2 sm:justify-end">
+                            <button
+                              onClick={() => copyToClipboard(buildResultContent(result))}
+                              className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <span>Copy</span>
+                            </button>
+                            <button
+                              onClick={() => downloadResultFile(result)}
+                              className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-semibold ${downloadButtonClass}`}
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 5v14m0 0l-4-4m4 4l4-4"
+                                />
+                              </svg>
+                              <span>Download</span>
+                            </button>
+                          </div>
                         </div>
 
                         {/* Search Results */}
@@ -539,25 +625,46 @@ function VisionExtractor() {
                               We couldn&apos;t find any titles with URLs in this
                               image.
                             </p>
-                            <button
-                              onClick={() => copyToClipboard(result.text)}
-                              className="inline-flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition-colors"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                            <div className="flex flex-wrap gap-3 justify-center">
+                              <button
+                                onClick={() => copyToClipboard(result.text)}
+                                className="inline-flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition-colors"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                />
-                              </svg>
-                              <span>Copy extracted text</span>
-                            </button>
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                  />
+                                </svg>
+                                <span>Copy extracted text</span>
+                              </button>
+                              <button
+                                onClick={() => downloadResultFile(result)}
+                                className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-semibold ${downloadButtonClass}`}
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 5v14m0 0l-4-4m4 4l4-4"
+                                  />
+                                </svg>
+                                <span>Download text</span>
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div className="bg-red-50 rounded-xl p-4 border border-red-200">

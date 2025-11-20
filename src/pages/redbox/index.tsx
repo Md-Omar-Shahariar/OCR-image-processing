@@ -5,6 +5,7 @@ import { withAuth } from "../../components/withAuth";
 import AppShell from "../../components/layout/AppShell";
 import PageHeaderCard from "../../components/ui/PageHeaderCard";
 import ProgressBar from "../../components/ui/ProgressBar";
+import { themeColors } from "@/lib/theme";
 
 // Type definitions
 interface Box {
@@ -39,6 +40,56 @@ function RedBoxScanner() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const theme = themeColors.redfox;
+  const downloadTextFile = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadBoxResult = (result: OCRResult, index: number) => {
+    const content = [
+      `Box ${index + 1}`,
+      `Text: ${result.text || "No text"}`,
+      `Position: X${result.box.x}, Y${result.box.y}`,
+      `Size: ${result.box.width}x${result.box.height}px`,
+      result.confidence
+        ? `Confidence: ${Math.round(result.confidence)}%`
+        : undefined,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    downloadTextFile(content, `redbox_${index + 1}.txt`);
+  };
+
+  const downloadAllResults = () => {
+    if (results.length === 0) {
+      return;
+    }
+    const content = results
+      .map((result, index) => {
+        const lines = [
+          `Box ${index + 1}`,
+          `Text: ${result.text || "No text"}`,
+          `Position: X${result.box.x}, Y${result.box.y}`,
+          `Size: ${result.box.width}x${result.box.height}px`,
+          result.confidence
+            ? `Confidence: ${Math.round(result.confidence)}%`
+            : undefined,
+        ];
+        return lines.filter(Boolean).join("\n");
+      })
+      .join("\n\n");
+    downloadTextFile(content, `redbox_results.txt`);
+  };
+  const downloadButtonClass =
+    theme.downloadButton || "bg-red-100 hover:bg-red-200 text-red-700";
 
   const goHome = () => {
     router.push("/");
@@ -464,7 +515,7 @@ function RedBoxScanner() {
 
   return (
     <AppShell
-      gradient="bg-gradient-to-br from-slate-50 via-red-50 to-orange-50"
+      gradient={theme.pageGradient}
       overlay={
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-100 to-transparent animate-pulse"></div>
@@ -487,7 +538,7 @@ function RedBoxScanner() {
           {/* Main Card */}
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden mb-8">
             {/* Header Section */}
-            <div className="bg-gradient-to-r from-red-600 to-orange-600 p-8 relative overflow-hidden">
+            <div className={`${theme.headerGradient} p-8 relative overflow-hidden`}>
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
 
@@ -520,9 +571,7 @@ function RedBoxScanner() {
                   {/* Drop Zone */}
                   <div
                     className={`relative border-3 border-dashed rounded-2xl p-8 text-center transition-all duration-500 cursor-pointer mb-6 group ${
-                      isProcessing
-                        ? "border-red-500 bg-red-50 scale-105"
-                        : "border-slate-300 hover:border-red-400 hover:bg-red-50"
+                      isProcessing ? theme.dropzoneActive : theme.dropzoneIdle
                     }`}
                     onClick={triggerFileInput}
                   >
@@ -536,7 +585,9 @@ function RedBoxScanner() {
                     />
 
                     <div className="max-w-md mx-auto">
-                      <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <div
+                        className={`w-20 h-20 mx-auto mb-6 bg-gradient-to-r ${theme.dropzoneAccent} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg`}
+                      >
                         <svg
                           className="w-10 h-10 text-white"
                           fill="none"
@@ -587,7 +638,7 @@ function RedBoxScanner() {
                     <ProgressBar
                       value={uploadProgress}
                       label="Processing image..."
-                      accentClass="from-red-500 to-orange-500"
+                      accentClass={theme.dropzoneAccent}
                     />
                   )}
 
@@ -614,8 +665,10 @@ function RedBoxScanner() {
                 {/* Right Column - Tips & Info */}
                 <div>
                   {/* Tips Card */}
-                  <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-6 border border-red-200 mb-8">
-                    <h4 className="font-semibold text-red-800 mb-3 flex items-center space-x-2">
+                  <div className={`${theme.tipsWrapper} mb-8`}>
+                    <h4
+                      className={`font-semibold ${theme.tipsTitle} mb-3 flex items-center space-x-2`}
+                    >
                       <svg
                         className="w-5 h-5"
                         fill="none"
@@ -631,23 +684,23 @@ function RedBoxScanner() {
                       </svg>
                       <span>Best Practices</span>
                     </h4>
-                    <ul className="space-y-2 text-sm text-red-700">
+                    <ul className={`space-y-2 text-sm ${theme.tipsText}`}>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                        <div className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}></div>
                         <span>Use clear images with distinct red boxes</span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                        <div className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}></div>
                         <span>
                           Ensure good contrast between text and background
                         </span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                        <div className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}></div>
                         <span>Red boxes should be clearly visible</span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                        <div className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}></div>
                         <span>Text inside boxes should be readable</span>
                       </li>
                     </ul>
@@ -746,16 +799,37 @@ function RedBoxScanner() {
 
               {/* Text Results Panel */}
               <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6">
-                  <div className="flex items-center justify-between">
+                <div className={`bg-gradient-to-r from-green-600 to-emerald-600 p-6`}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-bold text-white flex items-center space-x-3">
                       <span>📋 Extracted Text</span>
                     </h2>
                     {results.length > 0 && (
-                      <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-                        <span className="text-white font-semibold text-sm">
-                          {results.length} box{results.length > 1 ? "es" : ""}
-                        </span>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                          <span className="text-white font-semibold text-sm">
+                            {results.length} box{results.length > 1 ? "es" : ""}
+                          </span>
+                        </div>
+                        <button
+                          onClick={downloadAllResults}
+                          className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-semibold ${downloadButtonClass}`}
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 5v14m0 0l-4-4m4 4l4-4"
+                            />
+                          </svg>
+                          <span>Download all</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -786,25 +860,46 @@ function RedBoxScanner() {
                                 )}
                               </div>
                             </div>
-                            <button
-                              onClick={() => copyToClipboard(result.text)}
-                              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() => copyToClipboard(result.text)}
+                                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                />
-                              </svg>
-                              <span>Copy</span>
-                            </button>
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                  />
+                                </svg>
+                                <span>Copy</span>
+                              </button>
+                              <button
+                                onClick={() => downloadBoxResult(result, index)}
+                                className={`inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-semibold ${downloadButtonClass}`}
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 5v14m0 0l-4-4m4 4l4-4"
+                                  />
+                                </svg>
+                                <span>Download</span>
+                              </button>
+                            </div>
                           </div>
 
                           <div className="bg-white rounded-xl p-4 border border-slate-200">
