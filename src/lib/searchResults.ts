@@ -36,6 +36,7 @@ export function extractSearchResults(text: string): SearchResult[] {
     const urlMatch = line.match(/https?:\/\/[^\s]+/);
 
     if (urlMatch) {
+      console.log(urlMatch.length, "MATCH...................");
       const lineParts = line.split(/\s+/);
       const urlIndex = lineParts.findIndex((part) =>
         part.includes(urlMatch[0])
@@ -118,9 +119,6 @@ export function extractSearchResults(text: string): SearchResult[] {
       }
     }
   }
-
-  return results.filter(
-    (result, index, self) =>
-      index === self.findIndex((r) => r.url === result.url)
-  );
+  console.log(results.length, "res/..................");
+  return results;
 }
