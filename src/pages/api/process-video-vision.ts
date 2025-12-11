@@ -1,12 +1,13 @@
 import { resolveVisionLanguage, runVisionOCR } from "@/lib/googleVision";
-import { cleanText } from "@/lib/searchResults";
+import { cleanText, extractSearchResults } from "@/lib/searchResults";
 import {
   aggregateFrameText,
   extractFramesFromVideo,
   parseVisionVideoFormData,
+  MAX_VIDEO_FRAMES,
   VISION_MAX_VIDEO_SIZE,
 } from "@/lib/videoVision";
-import { FrameOcrResult, VideoOcrResponse } from "@/types/type";
+import { FrameOcrResult, SearchResult, VideoOcrResponse } from "@/types/type";
 import { NextApiRequest, NextApiResponse } from "next";
 
 export const config = {
@@ -15,6 +16,21 @@ export const config = {
     responseLimit: "12mb",
   },
 };
+
+function mergeResults(
+  existing: SearchResult[],
+  incoming: SearchResult[]
+): SearchResult[] {
+  const byUrl = new Map(existing.map((item) => [item.url, item]));
+
+  incoming.forEach((item) => {
+    if (!byUrl.has(item.url)) {
+      byUrl.set(item.url, item);
+    }
+  });
+
+  return Array.from(byUrl.values());
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -37,7 +53,7 @@ export default async function handler(
   }
 
   try {
-    const { fields, fileBuffer } = await parseVisionVideoFormData(req);
+    const { fields, fileBuffer, mimeType } = await parseVisionVideoFormData(req);
 
     if (!fileBuffer || fileBuffer.length === 0) {
       return res.status(400).json({
@@ -54,16 +70,30 @@ export default async function handler(
     }
 
     const language = resolveVisionLanguage(fields.language);
-    const frames = await extractFramesFromVideo(fileBuffer);
+    const frames = await extractFramesFromVideo(
+      fileBuffer,
+      MAX_VIDEO_FRAMES,
+      mimeType
+    );
 
     const frameResults: FrameOcrResult[] = [];
+    let aggregatedResults: SearchResult[] = [];
+
     for (const frame of frames) {
-      const rawText = await runVisionOCR(frame, language, "DOCUMENT_TEXT_DETECTION");
+      const rawText = await runVisionOCR(frame, language, "TEXT_DETECTION");
       const text = cleanText(rawText);
+      const searchResults = extractSearchResults(text);
+      const imageDataUrl = `data:image/jpeg;base64,${frame.toString("base64")}`;
+
+      aggregatedResults = mergeResults(aggregatedResults, searchResults);
+
       frameResults.push({
         index: frameResults.length + 1,
         text,
         rawText,
+        imageDataUrl,
+        searchResults,
+        resultCount: searchResults.length,
       });
     }
 
@@ -74,6 +104,9 @@ export default async function handler(
       aggregateText,
       framesProcessed: frameResults.length,
       frames: frameResults,
+      searchResults: aggregatedResults,
+      resultCount: aggregatedResults.length,
+      resultsCount: aggregatedResults.length,
     });
   } catch (error: unknown) {
     const message =

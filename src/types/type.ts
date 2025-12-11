@@ -35,10 +35,14 @@ export interface FrameOcrResult {
   index: number;
   text: string;
   rawText?: string;
+  imageDataUrl?: string;
+  searchResults?: SearchResult[];
+  resultCount?: number;
 }
 
 export interface VideoOcrResponse extends ApiResponse {
   frames?: FrameOcrResult[];
   framesProcessed?: number;
   aggregateText?: string;
+  searchResults?: SearchResult[];
 }

@@ -103,19 +103,28 @@ export async function parseVisionVideoFormData(
   });
 }
 
-async function runFfmpeg(inputPath: string, framePattern: string, maxFrames: number) {
+async function runFfmpeg(
+  inputPath: string,
+  framePattern: string,
+  maxFrames: number,
+  forceFirstFrame = false
+) {
   if (!ffmpegPath) {
     throw new Error(
       "FFmpeg binary not found. Install ffmpeg-static to enable video processing."
     );
   }
 
+  const filter = forceFirstFrame ? "select=eq(n\\,0),scale=1280:-1" : "fps=1,scale=1280:-1";
+
   const args = [
     "-y",
     "-i",
     inputPath,
     "-vf",
-    `fps=1,scale=1280:-1`,
+    filter,
+    "-q:v",
+    "3",
     "-vframes",
     String(maxFrames),
     framePattern,
@@ -150,21 +159,39 @@ async function runFfmpeg(inputPath: string, framePattern: string, maxFrames: num
   });
 }
 
+function inferExtension(mimeType?: string) {
+  if (!mimeType) return "";
+  if (mimeType === "video/mp4") return ".mp4";
+  if (mimeType === "video/quicktime") return ".mov";
+  if (mimeType === "video/x-matroska") return ".mkv";
+  if (mimeType === "video/webm") return ".webm";
+  return "";
+}
+
 export async function extractFramesFromVideo(
   videoBuffer: Buffer,
-  maxFrames = MAX_VIDEO_FRAMES
+  maxFrames = MAX_VIDEO_FRAMES,
+  mimeType?: string
 ): Promise<Buffer[]> {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "vision-video-"));
-  const inputPath = path.join(tempDir, "input-video");
-  const framePattern = path.join(tempDir, "frame-%03d.png");
+  const ext = inferExtension(mimeType) || ".mp4";
+  const inputPath = path.join(tempDir, `input-video${ext}`);
+  const framePattern = path.join(tempDir, "frame-%03d.jpg");
 
   try {
     await fs.writeFile(inputPath, videoBuffer);
     await runFfmpeg(inputPath, framePattern, maxFrames);
 
-    const files = (await fs.readdir(tempDir))
-      .filter((file) => file.startsWith("frame-") && file.endsWith(".png"))
+    let files = (await fs.readdir(tempDir))
+      .filter((file) => file.startsWith("frame-") && file.endsWith(".jpg"))
       .sort();
+
+    if (files.length === 0) {
+      await runFfmpeg(inputPath, framePattern, 1, true);
+      files = (await fs.readdir(tempDir))
+        .filter((file) => file.startsWith("frame-") && file.endsWith(".jpg"))
+        .sort();
+    }
 
     const frames = await Promise.all(
       files.map((file) => fs.readFile(path.join(tempDir, file)))

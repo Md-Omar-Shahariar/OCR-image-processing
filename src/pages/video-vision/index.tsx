@@ -7,7 +7,7 @@ import UploadDropzone from "../../components/upload/UploadDropzone";
 import FileList from "../../components/upload/FileList";
 import ProgressBar from "../../components/ui/ProgressBar";
 import Toast from "../../components/feedback/Toast";
-import { FrameOcrResult } from "@/types/type";
+import { FrameOcrResult, SearchResult } from "@/types/type";
 
 const SUPPORTED_LANGUAGES = [
   { code: "eng", label: "English" },
@@ -22,6 +22,7 @@ function VisionVideoExtractor() {
   const [language, setLanguage] = useState("eng");
   const [frames, setFrames] = useState<FrameOcrResult[]>([]);
   const [aggregateText, setAggregateText] = useState("");
+  const [aggregatedResults, setAggregatedResults] = useState<SearchResult[]>([]);
   const [processing, setProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -53,6 +54,7 @@ function VisionVideoExtractor() {
     setVideoFile(null);
     setFrames([]);
     setAggregateText("");
+    setAggregatedResults([]);
   };
 
   const onFilesChange = (files: File[]) => {
@@ -60,6 +62,7 @@ function VisionVideoExtractor() {
     setFrames([]);
     setAggregateText("");
     setErrorMessage("");
+    setAggregatedResults([]);
   };
 
   const removeFile = () => {
@@ -113,6 +116,7 @@ function VisionVideoExtractor() {
       if (response.ok && data.status === "success") {
         setFrames(data.frames || []);
         setAggregateText(data.aggregateText || "");
+        setAggregatedResults(data.searchResults || []);
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 2500);
       } else {
@@ -132,7 +136,8 @@ function VisionVideoExtractor() {
     }
   };
 
-  const hasResults = frames.length > 0 || aggregateText.length > 0;
+  const hasResults =
+    frames.length > 0 || aggregateText.length > 0 || aggregatedResults.length > 0;
 
   const goHome = () => router.push("/");
 
@@ -342,13 +347,100 @@ function VisionVideoExtractor() {
                   </h2>
                   <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 text-center">
                     <span className="text-white font-semibold">
-                      {frames.length} frame{frames.length === 1 ? "" : "s"} analyzed
+                      {frames.length} frame{frames.length === 1 ? "" : "s"} analyzed ·{" "}
+                      {aggregatedResults.length} link{aggregatedResults.length === 1 ? "" : "s"} found
                     </span>
                   </div>
                 </div>
               </div>
 
               <div className="p-4 sm:p-6 space-y-6">
+                {aggregatedResults.length > 0 && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                      <div>
+                        <h3 className="text-xl font-bold text-slate-800">
+                          Extracted titles & links
+                        </h3>
+                        <p className="text-sm text-slate-600">
+                          Combined Vision title extraction across all frames.
+                        </p>
+                      </div>
+                      <div className="text-sm font-semibold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+                        {aggregatedResults.length} result{aggregatedResults.length === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                    <div className="grid gap-4">
+                      {aggregatedResults.map((result, index) => (
+                        <div
+                          key={`${result.url}-${index}`}
+                          className="bg-white border border-slate-200 rounded-xl p-4 hover:border-emerald-300 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-xs font-semibold text-slate-500 mb-1">
+                                Result {index + 1}
+                              </div>
+                              <div className="text-slate-800 font-semibold text-lg">
+                                {result.title}
+                              </div>
+                              {result.description && (
+                                <p className="text-sm text-slate-600 mt-2">{result.description}</p>
+                              )}
+                              <a
+                                href={result.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-emerald-600 hover:text-emerald-700 text-sm break-all inline-flex items-center space-x-2 mt-2"
+                              >
+                                <span>{result.url}</span>
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                  />
+                                </svg>
+                              </a>
+                            </div>
+                            <button
+                              onClick={() =>
+                                copyToClipboard(
+                                  `${result.title}\n${result.url}${
+                                    result.description ? `\n${result.description}` : ""
+                                  }`
+                                )
+                              }
+                              className="text-slate-400 hover:text-emerald-600 transition-colors p-2"
+                              title="Copy result"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {aggregateText && (
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
@@ -457,9 +549,63 @@ function VisionVideoExtractor() {
                               <span>Copy</span>
                             </button>
                           </div>
+                          {frame.imageDataUrl && (
+                            <div className="mb-3">
+                              <img
+                                src={frame.imageDataUrl}
+                                alt={`Frame ${frame.index}`}
+                                className="w-full rounded-xl border border-slate-200"
+                              />
+                            </div>
+                          )}
                           <pre className="bg-white rounded-xl p-3 text-sm text-slate-800 whitespace-pre-wrap max-h-48 overflow-y-auto border border-slate-200">
                             {frame.text || "No text detected in this frame."}
                           </pre>
+                          {frame.searchResults && frame.searchResults.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              <div className="text-sm font-semibold text-slate-700">
+                                Titles & links ({frame.searchResults.length})
+                              </div>
+                              <div className="grid gap-3">
+                                {frame.searchResults.map((result, idx) => (
+                                  <div
+                                    key={`${result.url}-${idx}`}
+                                    className="bg-white border border-slate-200 rounded-lg p-3"
+                                  >
+                                    <div className="text-slate-800 font-semibold text-sm">
+                                      {result.title}
+                                    </div>
+                                    {result.description && (
+                                      <p className="text-xs text-slate-600 mt-1">
+                                        {result.description}
+                                      </p>
+                                    )}
+                                    <a
+                                      href={result.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-emerald-600 hover:text-emerald-700 text-xs break-all inline-flex items-center space-x-1 mt-1"
+                                    >
+                                      <span>{result.url}</span>
+                                      <svg
+                                        className="w-3 h-3"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                        />
+                                      </svg>
+                                    </a>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
