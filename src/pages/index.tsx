@@ -106,6 +106,36 @@ function HomePageContent() {
 
   const secondaryFeatures: Feature[] = [
     {
+      id: "video-vision",
+      title: "Video Frame OCR",
+      description:
+        "Upload short videos and extract every on-screen word by sampling frames with Google Vision.",
+      icon: (
+        <svg
+          className="w-8 h-8"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14m-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h7a2 2 0 012 2v6a2 2 0 01-2 2z"
+          />
+        </svg>
+      ),
+      path: "/video-vision",
+      gradient: "from-emerald-500 to-sky-500",
+      features: [
+        "Frame sampling",
+        "Vision OCR",
+        "No audio needed",
+        "Download transcript",
+      ],
+      stats: "Video OCR",
+    },
+    {
       id: "redbox",
       title: "Red Box Detector",
       description:
