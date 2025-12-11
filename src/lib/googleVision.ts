@@ -32,6 +32,12 @@ function parseLanguageHint(language: string | undefined) {
   return LANGUAGE_HINTS[language];
 }
 
+export function resolveVisionLanguage(
+  language?: string | null
+): (typeof VISION_SUPPORTED_LANGUAGES)[number] {
+  return validateLanguage(language || undefined) || DEFAULT_VISION_LANGUAGE;
+}
+
 export async function parseVisionFormData(
   req: NextApiRequest,
   maxSize = VISION_MAX_FILE_SIZE
