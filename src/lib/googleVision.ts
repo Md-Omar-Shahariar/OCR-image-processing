@@ -35,7 +35,11 @@ function parseLanguageHint(language: string | undefined) {
 export function resolveVisionLanguage(
   language?: string | null
 ): (typeof VISION_SUPPORTED_LANGUAGES)[number] {
-  return validateLanguage(language || undefined) || DEFAULT_VISION_LANGUAGE;
+  return (
+    (validateLanguage(
+      language || undefined
+    ) as (typeof VISION_SUPPORTED_LANGUAGES)[number]) || DEFAULT_VISION_LANGUAGE
+  );
 }
 
 export async function parseVisionFormData(
