@@ -41,9 +41,26 @@ export function UploadDropzone({
   const [isDragging, setIsDragging] = useState(false);
 
   const updateFiles = (list: FileList | File[]) => {
-    const validFiles = Array.from(list).filter((file) =>
-      accept.includes("image") ? file.type.startsWith("image/") : true
-    );
+    const acceptRules = accept
+      .split(",")
+      .map((rule) => rule.trim())
+      .filter(Boolean);
+
+    const acceptsAll = acceptRules.length === 0 || acceptRules.includes("*/*");
+
+    const isAllowed = (file: File) => {
+      if (acceptsAll) return true;
+
+      return acceptRules.some((rule) => {
+        if (rule.endsWith("/*")) {
+          const prefix = rule.replace("/*", "/");
+          return file.type.startsWith(prefix);
+        }
+        return file.type === rule;
+      });
+    };
+
+    const validFiles = Array.from(list).filter(isAllowed);
     if (validFiles.length > 0) {
       onFilesChange(validFiles);
     }
