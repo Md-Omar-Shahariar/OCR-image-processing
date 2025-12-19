@@ -140,13 +140,37 @@ function VisionVideoExtractor() {
     frames.length > 0 || aggregateText.length > 0 || aggregatedResults.length > 0;
 
   const uniqueAggregatedResults = useMemo(() => {
-    const seen = new Set<string>();
-    return aggregatedResults.filter((result) => {
-      const key = result.title ? result.title.trim().toLowerCase() : result.url;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+    const results: SearchResult[] = [];
+    const normalizeText = (value?: string) => value?.trim().toLowerCase() || "";
+    const normalizeUrl = (value?: string) => value?.trim() || "";
+
+    aggregatedResults.forEach((incoming) => {
+      const titleKey = normalizeText(incoming.title);
+      const urlKey = normalizeUrl(incoming.url);
+      const descriptionKey = normalizeText(incoming.description);
+
+      const existingIndex = results.findIndex((item) => {
+        const matchTitle = titleKey && normalizeText(item.title) === titleKey;
+        const matchUrl = urlKey && normalizeUrl(item.url) === urlKey;
+        const matchDescription =
+          descriptionKey && normalizeText(item.description) === descriptionKey;
+        return matchTitle || matchUrl || matchDescription;
+      });
+
+      if (existingIndex >= 0) {
+        const existing = results[existingIndex];
+        results[existingIndex] = {
+          ...existing,
+          title: existing.title || incoming.title,
+          url: existing.url || incoming.url,
+          description: existing.description || incoming.description,
+        };
+      } else {
+        results.push(incoming);
+      }
     });
+
+    return results;
   }, [aggregatedResults]);
 
   const goHome = () => router.push("/");
