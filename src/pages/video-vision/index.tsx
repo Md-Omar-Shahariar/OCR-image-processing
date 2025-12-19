@@ -509,18 +509,18 @@ function VisionVideoExtractor() {
                     <h3 className="text-xl font-bold text-slate-800">
                       Frame by frame
                     </h3>
-                    <div className="grid gap-4">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {frames.map((frame) => (
                         <div
                           key={frame.index}
-                          className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                          className="group bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all transform hover:-translate-y-1"
                         >
                           <div className="relative">
                             {frame.imageDataUrl ? (
                               <img
                                 src={frame.imageDataUrl}
                                 alt={`Frame ${frame.index}`}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                               />
                             ) : (
                               <div className="w-full h-48 bg-slate-100 flex items-center justify-center text-slate-500 text-sm">
