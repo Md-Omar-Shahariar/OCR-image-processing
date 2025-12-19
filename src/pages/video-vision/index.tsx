@@ -1,5 +1,5 @@
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { withAuth } from "../../components/withAuth";
 import AppShell from "../../components/layout/AppShell";
 import PageHeaderCard from "../../components/ui/PageHeaderCard";
@@ -138,40 +138,6 @@ function VisionVideoExtractor() {
 
   const hasResults =
     frames.length > 0 || aggregateText.length > 0 || aggregatedResults.length > 0;
-
-  const uniqueAggregatedResults = useMemo(() => {
-    const results: SearchResult[] = [];
-    const normalizeText = (value?: string) => value?.trim().toLowerCase() || "";
-    const normalizeUrl = (value?: string) => value?.trim() || "";
-
-    aggregatedResults.forEach((incoming) => {
-      const titleKey = normalizeText(incoming.title);
-      const urlKey = normalizeUrl(incoming.url);
-      const descriptionKey = normalizeText(incoming.description);
-
-      const existingIndex = results.findIndex((item) => {
-        const matchTitle = titleKey && normalizeText(item.title) === titleKey;
-        const matchUrl = urlKey && normalizeUrl(item.url) === urlKey;
-        const matchDescription =
-          descriptionKey && normalizeText(item.description) === descriptionKey;
-        return matchTitle || matchUrl || matchDescription;
-      });
-
-      if (existingIndex >= 0) {
-        const existing = results[existingIndex];
-        results[existingIndex] = {
-          ...existing,
-          title: existing.title || incoming.title,
-          url: existing.url || incoming.url,
-          description: existing.description || incoming.description,
-        };
-      } else {
-        results.push(incoming);
-      }
-    });
-
-    return results;
-  }, [aggregatedResults]);
 
   const goHome = () => router.push("/");
 
@@ -646,62 +612,6 @@ function VisionVideoExtractor() {
                   </div>
                 )}
 
-                {uniqueAggregatedResults.length > 0 && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                      <div>
-                        <h3 className="text-xl font-bold text-slate-800">
-                          Unique titles across frames
-                        </h3>
-                        <p className="text-sm text-slate-600">
-                          Filtered to one entry per detected title.
-                        </p>
-                      </div>
-                      <div className="text-sm font-semibold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-                        {uniqueAggregatedResults.length} title
-                        {uniqueAggregatedResults.length === 1 ? "" : "s"}
-                      </div>
-                    </div>
-                    <div className="grid gap-3">
-                      {uniqueAggregatedResults.map((result, index) => (
-                        <div
-                          key={`${result.url}-${index}`}
-                          className="bg-white border border-slate-200 rounded-xl p-3"
-                        >
-                          <div className="text-slate-800 font-semibold text-sm">
-                            {result.title || "Untitled result"}
-                          </div>
-                          {result.description && (
-                            <p className="text-xs text-slate-600 mt-1">
-                              {result.description}
-                            </p>
-                          )}
-                          <a
-                            href={result.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-emerald-600 hover:text-emerald-700 text-xs break-all inline-flex items-center space-x-1 mt-1"
-                          >
-                            <span>{result.url}</span>
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                              />
-                            </svg>
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
