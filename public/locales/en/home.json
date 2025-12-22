@@ -1,0 +1,76 @@
+{
+  "status": "All Systems Operational",
+  "hero": {
+    "titleMain": "Image Processing",
+    "titleSub": "Made Simple & Powerful",
+    "descMain": "Transform images into actionable text with our AI-powered tools.",
+    "descSub": "Fast, accurate, and incredibly easy to use"
+  },
+  "workflow": {
+    "choose": "Choose engine",
+    "full": {
+      "badge": "Workspace · 01",
+      "title": "Full Page OCR",
+      "description": "Choose between CopyFish speed or Google Vision accuracy before you upload."
+    },
+    "title": {
+      "badge": "Workspace · 02",
+      "title": "Title & Link Extractor",
+      "description": "Pick the engine that best matches your SERP screenshots and jump straight into extraction."
+    }
+  },
+  "engineCards": {
+    "fullCopyfish": {
+      "label": "Full Page · CopyFish",
+      "summary": "Use OCR.Space / CopyFish for fast, generous 10MB batches.",
+      "badge": "CopyFish",
+      "details": "Engine 2 • Multi-file batching",
+      "chips": ["Default", "Up to 10MB", "Batch ready"]
+    },
+    "fullVision": {
+      "label": "Full Page · Google Vision",
+      "summary": "Route scans to DOCUMENT_TEXT_DETECTION for column-heavy layouts.",
+      "badge": "Vision",
+      "details": "4MB limit • DOCUMENT_TEXT_DETECTION",
+      "chips": ["Multilingual", "Premium OCR", "Best accuracy"]
+    },
+    "titleCopyfish": {
+      "label": "Title Extractor · CopyFish",
+      "summary": "Great for quick SERP screenshots with Latin characters.",
+      "badge": "CopyFish",
+      "details": "Engine 2 • Up to 10MB",
+      "chips": ["SEO research", "Fast parsing", "Link-ready"]
+    },
+    "titleVision": {
+      "label": "Title Extractor · Google Vision",
+      "summary": "Use TEXT_DETECTION when CopyFish misses dense, multilingual SERPs.",
+      "badge": "Vision",
+      "details": "4MB limit • TEXT_DETECTION",
+      "chips": ["Multilingual", "High confidence", "SERP focused"]
+    }
+  },
+  "secondary": {
+    "videoVision": {
+      "title": "Video Frame OCR",
+      "description": "Upload short videos and extract every on-screen word by sampling frames with Google Vision.",
+      "features": ["Frame sampling", "Vision OCR", "No audio needed", "Download transcript"],
+      "stats": "Video OCR"
+    },
+    "redbox": {
+      "title": "Red Box Detector",
+      "description": "Advanced computer vision that detects and extracts text from red bounding boxes with precision.",
+      "features": ["OpenCV powered", "Box detection", "Text extraction", "High precision"],
+      "stats": "Computer Vision"
+    }
+  },
+  "footer": {
+    "ocrEngine": "OCR Engine",
+    "aiProcessing": "AI Processing",
+    "titleExtraction": "Title Extraction",
+    "visionSystems": "Vision Systems",
+    "tagline": "Image Processing Suite • Powered by Advanced AI Technology • v2.3.7"
+  },
+  "modal": {
+    "close": "Close modal"
+  }
+}

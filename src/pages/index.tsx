@@ -1,7 +1,10 @@
 // components/HomePage.tsx
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
+import { GetStaticProps } from "next";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import BasicAuth from "../components/BasicAuth";
 import AppShell from "../components/layout/AppShell";
 import FeatureCard, { Feature } from "../components/ui/FeatureCard";
@@ -33,6 +36,7 @@ interface WorkflowSection {
 
 function HomePageContent() {
   const router = useRouter();
+  const { t } = useTranslation(["home", "common"]);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
@@ -43,63 +47,59 @@ function HomePageContent() {
   const engineCards: Record<EngineCardId, EngineCard> = {
     "full-copyfish": {
       id: "full-copyfish",
-      label: "Full Page · CopyFish",
-      summary: "Use OCR.Space / CopyFish for fast, generous 10MB batches.",
+      label: t("engineCards.fullCopyfish.label"),
+      summary: t("engineCards.fullCopyfish.summary"),
       gradient: "from-purple-600 via-pink-500 to-rose-500",
       path: "/text-extractor?engine=ocrspace",
-      badge: "CopyFish",
-      details: "Engine 2 • Multi-file batching",
-      chips: ["Default", "Up to 10MB", "Batch ready"],
+      badge: t("engineCards.fullCopyfish.badge"),
+      details: t("engineCards.fullCopyfish.details"),
+      chips: t("engineCards.fullCopyfish.chips", { returnObjects: true }) as string[],
     },
     "full-vision": {
       id: "full-vision",
-      label: "Full Page · Google Vision",
-      summary:
-        "Route scans to DOCUMENT_TEXT_DETECTION for column-heavy layouts.",
+      label: t("engineCards.fullVision.label"),
+      summary: t("engineCards.fullVision.summary"),
       gradient: "from-emerald-500 via-sky-500 to-blue-500",
       path: "/text-extractor?engine=vision",
-      badge: "Vision",
-      details: "4MB limit • DOCUMENT_TEXT_DETECTION",
-      chips: ["Multilingual", "Premium OCR", "Best accuracy"],
+      badge: t("engineCards.fullVision.badge"),
+      details: t("engineCards.fullVision.details"),
+      chips: t("engineCards.fullVision.chips", { returnObjects: true }) as string[],
     },
     "title-copyfish": {
       id: "title-copyfish",
-      label: "Title Extractor · CopyFish",
-      summary: "Great for quick SERP screenshots with Latin characters.",
+      label: t("engineCards.titleCopyfish.label"),
+      summary: t("engineCards.titleCopyfish.summary"),
       gradient: "from-purple-600 via-pink-500 to-rose-500",
       path: "/title-extractor?engine=ocrspace",
-      badge: "CopyFish",
-      details: "Engine 2 • Up to 10MB",
-      chips: ["SEO research", "Fast parsing", "Link-ready"],
+      badge: t("engineCards.titleCopyfish.badge"),
+      details: t("engineCards.titleCopyfish.details"),
+      chips: t("engineCards.titleCopyfish.chips", { returnObjects: true }) as string[],
     },
     "title-vision": {
       id: "title-vision",
-      label: "Title Extractor · Google Vision",
-      summary:
-        "Use TEXT_DETECTION when CopyFish misses dense, multilingual SERPs.",
+      label: t("engineCards.titleVision.label"),
+      summary: t("engineCards.titleVision.summary"),
       gradient: "from-emerald-500 via-teal-500 to-sky-500",
       path: "/title-extractor?engine=vision",
-      badge: "Vision",
-      details: "4MB limit • TEXT_DETECTION",
-      chips: ["Multilingual", "High confidence", "SERP focused"],
+      badge: t("engineCards.titleVision.badge"),
+      details: t("engineCards.titleVision.details"),
+      chips: t("engineCards.titleVision.chips", { returnObjects: true }) as string[],
     },
   };
 
   const workflowSections: WorkflowSection[] = [
     {
       id: "full",
-      badge: "Workspace · 01",
-      title: "Full Page OCR",
-      description:
-        "Choose between CopyFish speed or Google Vision accuracy before you upload.",
+      badge: t("workflow.full.badge"),
+      title: t("workflow.full.title"),
+      description: t("workflow.full.description"),
       cards: ["full-copyfish", "full-vision"],
     },
     {
       id: "title",
-      badge: "Workspace · 02",
-      title: "Title & Link Extractor",
-      description:
-        "Pick the engine that best matches your SERP screenshots and jump straight into extraction.",
+      badge: t("workflow.title.badge"),
+      title: t("workflow.title.title"),
+      description: t("workflow.title.description"),
       cards: ["title-copyfish", "title-vision"],
     },
   ];
@@ -107,9 +107,8 @@ function HomePageContent() {
   const secondaryFeatures: Feature[] = [
     {
       id: "video-vision",
-      title: "Video Frame OCR",
-      description:
-        "Upload short videos and extract every on-screen word by sampling frames with Google Vision.",
+      title: t("secondary.videoVision.title"),
+      description: t("secondary.videoVision.description"),
       icon: (
         <svg
           className="w-8 h-8"
@@ -127,19 +126,13 @@ function HomePageContent() {
       ),
       path: "/video-vision",
       gradient: "from-emerald-500 to-sky-500",
-      features: [
-        "Frame sampling",
-        "Vision OCR",
-        "No audio needed",
-        "Download transcript",
-      ],
-      stats: "Video OCR",
+      features: t("secondary.videoVision.features", { returnObjects: true }) as string[],
+      stats: t("secondary.videoVision.stats"),
     },
     {
       id: "redbox",
-      title: "Red Box Detector",
-      description:
-        "Advanced computer vision that detects and extracts text from red bounding boxes with precision.",
+      title: t("secondary.redbox.title"),
+      description: t("secondary.redbox.description"),
       icon: (
         <svg
           className="w-8 h-8"
@@ -157,13 +150,8 @@ function HomePageContent() {
       ),
       path: "/redbox",
       gradient: "from-red-500 to-orange-500",
-      features: [
-        "OpenCV powered",
-        "Box detection",
-        "Text extraction",
-        "High precision",
-      ],
-      stats: "Computer Vision",
+      features: t("secondary.redbox.features", { returnObjects: true }) as string[],
+      stats: t("secondary.redbox.stats"),
     },
   ];
 
@@ -191,21 +179,21 @@ function HomePageContent() {
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-300"></div>
             </div>
             <span className="text-sm font-semibold text-slate-700">
-              All Systems Operational
+              {t("status")}
             </span>
           </div>
 
           <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-slate-800 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
-            Image Processing
+            {t("hero.titleMain")}
             <span className="block text-3xl md:text-4xl text-slate-600 mt-2">
-              Made Simple & Powerful
+              {t("hero.titleSub")}
             </span>
           </h1>
 
           <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed mb-8">
-            Transform images into actionable text with our AI-powered tools.
+            {t("hero.descMain")}
             <span className="block text-sm text-slate-500 mt-2">
-              Fast, accurate, and incredibly easy to use
+              {t("hero.descSub")}
             </span>
           </p>
 
@@ -234,7 +222,7 @@ function HomePageContent() {
                   onClick={() => setActiveSection(section.id)}
                   className="inline-flex items-center text-sm font-semibold bg-slate-900 text-white px-4 py-2 rounded-2xl hover:bg-slate-800 transition"
                 >
-                  Choose engine
+                  {t("workflow.choose")}
                   <svg
                     className="w-4 h-4 ml-2"
                     fill="none"
@@ -303,31 +291,30 @@ function HomePageContent() {
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-slate-700">
-                  OCR Engine
+                  {t("footer.ocrEngine")}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-slate-700">
-                  AI Processing
+                  {t("footer.aiProcessing")}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-slate-700">
-                  Title Extraction
+                  {t("footer.titleExtraction")}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-slate-700">
-                  Vision Systems
+                  {t("footer.visionSystems")}
                 </span>
               </div>
             </div>
             <p className="text-slate-600 text-sm">
-              Image Processing Suite • Powered by Advanced AI Technology •
-              v2.3.7
+              {t("footer.tagline")}
             </p>
           </div>
         </div>
@@ -343,7 +330,7 @@ function HomePageContent() {
             <button
               className="absolute top-4 right-4 text-slate-500 hover:text-slate-800"
               onClick={() => setActiveSection(null)}
-              aria-label="Close modal"
+              aria-label={t("modal.close")}
             >
               <svg
                 className="w-6 h-6"
@@ -403,3 +390,9 @@ export default function HomePage() {
     </BasicAuth>
   );
 }
+
+export const getStaticProps: GetStaticProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? "en", ["common", "home"])),
+  },
+});

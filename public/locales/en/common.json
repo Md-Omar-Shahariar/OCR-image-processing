@@ -1,0 +1,90 @@
+{
+  "nav": {
+    "brand": "Text Extractor",
+    "language": "Language",
+    "languageMode": "Language mode",
+    "english": "English",
+    "japanese": "Japanese",
+    "englishShort": "EN",
+    "japaneseShort": "JA"
+  },
+  "language": {
+    "english": "English",
+    "japanese": "Japanese",
+    "chinese": "Chinese",
+    "korean": "Korean"
+  },
+  "videoVision": {
+    "title": "Video Frame Text Extractor",
+    "subtitle": "Upload a short video with on-screen text. We sample frames, run Google Vision OCR, and return the combined transcript.",
+    "stats": {
+      "engine": "Engine",
+      "engineValue": "Google Vision",
+      "frames": "Frames",
+      "framesValue": "Up to 12 / video"
+    },
+    "hero": {
+      "title": "Extract Text from Silent Videos",
+      "subtitle": "Perfect for tutorials, screen recordings, and reels without voiceovers. We capture key frames and merge all on-screen text for you.",
+      "idealLabel": "Ideal length",
+      "idealValue": "< 1 min, < 50MB",
+      "samplingLabel": "Sampling",
+      "samplingValue": "1 fps · max 12 frames",
+      "outputLabel": "Output",
+      "outputValue": "Per-frame + merged text"
+    },
+    "form": {
+      "heading": "Upload your video",
+      "description": "We strip audio, sample clear frames, and run Vision OCR on each frame. Best for videos with prominent text overlays.",
+      "languageLabel": "Language hint",
+      "languageHelp": "Helps Vision prioritize the right character set.",
+      "samplingRules": "Sampling rules",
+      "ruleOne": "1 frame per second",
+      "ruleTwo": "Up to 12 frames per upload",
+      "ruleThree": "Frames resized to 1280px wide",
+      "helperText": "Optimized for MP4/MOV • Under 50MB",
+      "maxSizeCopy": "We only read video frames—no audio",
+      "browseLabel": "Choose video",
+      "clearLabel": "Reset",
+      "processing": "Extracting text...",
+      "cta": "Process video"
+    },
+    "best": {
+      "title": "Best results",
+      "tip1": "Use crisp screen recordings with readable text.",
+      "tip2": "Keep clips short; we only sample the first 12 frames.",
+      "tip3": "High-contrast text overlays work best."
+    },
+    "processed": {
+      "title": "Video processed",
+      "summary": "{{frames}} frame{{frameSuffix}} analyzed · {{links}} link{{linkSuffix}} found",
+      "extractedTitle": "Extracted titles & links",
+      "extractedSubtitle": "Combined Vision title extraction across all frames.",
+      "resultsCount_one": "{{count}} result",
+      "resultsCount_other": "{{count}} results",
+      "resultLabel": "Result {{index}}",
+      "copy": "Copy result",
+      "combinedTitle": "Combined transcript",
+      "combinedSubtitle": "Unique lines merged across all sampled frames.",
+      "copyLabel": "Copy",
+      "downloadLabel": "Download",
+      "frameByFrame": "Frame by frame"
+    },
+    "empty": {
+      "title": "Turn silent videos into text",
+      "subtitle": "Upload a short clip with on-screen words. We capture key frames and merge the detected text so you can copy or download it instantly.",
+      "tagline": "🎯 Great for tutorials, course slides, and screen recordings"
+    },
+    "toast": {
+      "successTitle": "🎉 Video processed!",
+      "successMessage": "Frames analyzed and text extracted.",
+      "errorTitle": "⚠️ Could not process video",
+      "errorMessage": "Please retry with a shorter clip."
+    },
+    "frame": {
+      "words_one": "{{count}} word",
+      "words_other": "{{count}} words",
+      "noImage": "No image available"
+    }
+  }
+}

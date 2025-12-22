@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 
 interface BasicAuthProps {
   children: React.ReactNode;
 }
 
 export default function BasicAuth({ children }: BasicAuthProps) {
+  const router = useRouter();
+  const { i18n } = useTranslation("common");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
@@ -26,7 +30,10 @@ export default function BasicAuth({ children }: BasicAuthProps) {
     if (username === "knowledge" && password === "testPass123") {
       sessionStorage.setItem("Access", "Authenticated");
       document.cookie = `Access=Authenticated; path=/; max-age=86400`; // 24 hours
+      document.cookie = `NEXT_LOCALE=ja; path=/; max-age=31536000`;
+      i18n.changeLanguage("ja");
       setIsAuthenticated(true);
+      router.push("/ja", "/ja", { locale: "ja" });
       return true;
     }
     return false;

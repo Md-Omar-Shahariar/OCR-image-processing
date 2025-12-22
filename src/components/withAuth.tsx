@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 
 export function withAuth<P extends object>(
   WrappedComponent: React.ComponentType<P>

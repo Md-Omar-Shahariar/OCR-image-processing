@@ -39,6 +39,10 @@ export function UploadDropzone({
 }: UploadDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const isVideoDropzone = accept?.includes("video");
+  const dropPlaceholder = isVideoDropzone
+    ? "🎥 Drop videos here or click to browse"
+    : "✨ Drop images here or click to browse";
 
   const updateFiles = (list: FileList | File[]) => {
     const acceptRules = accept
@@ -140,12 +144,10 @@ export function UploadDropzone({
 
         <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3">
           {files.length > 0
-            ? `📁 ${files.length} file${
-                files.length > 1 ? "s" : ""
-              } selected`
+            ? `📁 ${files.length} file${files.length > 1 ? "s" : ""} selected`
             : processing
             ? "🔄 Processing your files..."
-            : "✨ Drop images here or click to browse"}
+            : dropPlaceholder}
         </h3>
 
         <p className="text-slate-500 text-sm mb-4">{maxSizeCopy}</p>

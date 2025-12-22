@@ -1,3 +1,4 @@
+import { useTranslation } from "next-i18next";
 import { FrameOcrResult } from "@/types/type";
 
 interface FrameCardProps {
@@ -5,7 +6,8 @@ interface FrameCardProps {
 }
 
 function FrameCard({ frame }: FrameCardProps) {
-  const previewText = frame.text?.trim() || "No detected text on this frame.";
+  const { t } = useTranslation("common");
+  const previewText = frame.text?.trim() || "";
   const wordCount = previewText.split(/\s+/).filter(Boolean).length;
 
   return (
@@ -31,9 +33,7 @@ function FrameCard({ frame }: FrameCardProps) {
               d="M3 5h12M9 3v2m-5 6h12m-6-2v2m-5 6h12m-6-2v2"
             />
           </svg>
-          <span>
-            {wordCount} word{wordCount === 1 ? "" : "s"}
-          </span>
+          <span>{t("videoVision.frame.words", { count: wordCount })}</span>
         </div>
       </div>
 
@@ -46,7 +46,7 @@ function FrameCard({ frame }: FrameCardProps) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm text-slate-500">
-            No image available
+            {t("videoVision.frame.noImage")}
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/0 to-transparent"></div>

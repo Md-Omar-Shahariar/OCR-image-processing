@@ -1,0 +1,76 @@
+{
+  "status": "全システム稼働中",
+  "hero": {
+    "titleMain": "画像処理",
+    "titleSub": "シンプルかつ強力に",
+    "descMain": "AIを使って画像からテキストを抽出し、有用な情報に変換します。",
+    "descSub": "高速・高精度・すぐに使える"
+  },
+  "workflow": {
+    "choose": "エンジンを選択",
+    "full": {
+      "badge": "ワークスペース · 01",
+      "title": "ページ全体OCR",
+      "description": "アップロード前に、CopyFishのスピードかGoogle Visionの精度かを選べます。"
+    },
+    "title": {
+      "badge": "ワークスペース · 02",
+      "title": "タイトル＆リンク抽出",
+      "description": "SERPスクリーンショットに最適なエンジンを選んで、すぐに抽出を開始。"
+    }
+  },
+  "engineCards": {
+    "fullCopyfish": {
+      "label": "ページ全体 · CopyFish",
+      "summary": "OCR.Space / CopyFishで高速・寛大な10MBバッチ処理。",
+      "badge": "CopyFish",
+      "details": "エンジン2 • 複数ファイルバッチ",
+      "chips": ["デフォルト", "最大10MB", "バッチ対応"]
+    },
+    "fullVision": {
+      "label": "ページ全体 · Google Vision",
+      "summary": "カラムが多いレイアウトにDOCUMENT_TEXT_DETECTIONで対応。",
+      "badge": "Vision",
+      "details": "4MB上限 • DOCUMENT_TEXT_DETECTION",
+      "chips": ["多言語", "高精度OCR", "最良の精度"]
+    },
+    "titleCopyfish": {
+      "label": "タイトル抽出 · CopyFish",
+      "summary": "ラテン文字のSERPスクリーンショットに最適。",
+      "badge": "CopyFish",
+      "details": "エンジン2 • 最大10MB",
+      "chips": ["SEOリサーチ", "高速解析", "リンク対応"]
+    },
+    "titleVision": {
+      "label": "タイトル抽出 · Google Vision",
+      "summary": "CopyFishが苦手な密な多言語SERPにはTEXT_DETECTIONを使用。",
+      "badge": "Vision",
+      "details": "4MB上限 • TEXT_DETECTION",
+      "chips": ["多言語", "高信頼度", "SERP特化"]
+    }
+  },
+  "secondary": {
+    "videoVision": {
+      "title": "ビデオフレームOCR",
+      "description": "短い動画をアップロードし、フレーム抽出とGoogle Visionで画面上の文字を取得。",
+      "features": ["フレームサンプリング", "Vision OCR", "音声不要", "テキスト保存"],
+      "stats": "動画OCR"
+    },
+    "redbox": {
+      "title": "赤枠検出器",
+      "description": "赤いバウンディングボックス内の文字を高精度で検出・抽出するコンピュータビジョン。",
+      "features": ["OpenCV搭載", "枠検出", "文字抽出", "高精度"],
+      "stats": "コンピュータビジョン"
+    }
+  },
+  "footer": {
+    "ocrEngine": "OCRエンジン",
+    "aiProcessing": "AI処理",
+    "titleExtraction": "タイトル抽出",
+    "visionSystems": "ビジョンシステム",
+    "tagline": "画像処理スイート • 高度なAI技術で動作 • v2.3.7"
+  },
+  "modal": {
+    "close": "モーダルを閉じる"
+  }
+}
