@@ -1,0 +1,90 @@
+{
+  "nav": {
+    "brand": "テキストエクストラクター",
+    "language": "言語",
+    "languageMode": "言語モード",
+    "english": "英語",
+    "japanese": "日本語",
+    "englishShort": "EN",
+    "japaneseShort": "JA"
+  },
+  "language": {
+    "english": "英語",
+    "japanese": "日本語",
+    "chinese": "中国語",
+    "korean": "韓国語"
+  },
+  "videoVision": {
+    "title": "ビデオフレームテキスト抽出",
+    "subtitle": "画面上に文字がある短い動画をアップロード。フレームを抽出し、Google Vision OCRで解析してテキストをまとめて返します。",
+    "stats": {
+      "engine": "エンジン",
+      "engineValue": "Google Vision",
+      "frames": "フレーム",
+      "framesValue": "1本につき最大12枚"
+    },
+    "hero": {
+      "title": "音声なし動画からテキスト抽出",
+      "subtitle": "チュートリアルや画面録画、ナレーションなしのリールに最適。重要なフレームを拾い、画面上の文字をまとめて返します。",
+      "idealLabel": "推奨尺",
+      "idealValue": "1分以内・50MB未満",
+      "samplingLabel": "サンプリング",
+      "samplingValue": "毎秒1枚・最大12フレーム",
+      "outputLabel": "出力",
+      "outputValue": "フレーム別＋結合テキスト"
+    },
+    "form": {
+      "heading": "動画をアップロード",
+      "description": "音声を除去し、鮮明なフレームを抽出してVision OCRを実行します。文字が大きく表示された動画に最適です。",
+      "languageLabel": "言語ヒント",
+      "languageHelp": "優先する文字種をVisionに伝えます。",
+      "samplingRules": "サンプリングルール",
+      "ruleOne": "毎秒1フレーム",
+      "ruleTwo": "アップロードごと最大12フレーム",
+      "ruleThree": "フレームを横1280pxにリサイズ",
+      "helperText": "MP4/MOV推奨・50MB以内",
+      "maxSizeCopy": "音声は読みません。フレームのみ処理します。",
+      "browseLabel": "動画を選択",
+      "clearLabel": "リセット",
+      "processing": "テキストを抽出中...",
+      "cta": "動画を処理"
+    },
+    "best": {
+      "title": "精度を上げるコツ",
+      "tip1": "文字がはっきり読める画面録画を使う。",
+      "tip2": "短いクリップがおすすめ（最初の12フレームを抽出）。",
+      "tip3": "高コントラストのテキストが最も効果的。"
+    },
+    "processed": {
+      "title": "動画を処理しました",
+      "summary": "{{frames}}フレームを分析・{{links}}件のリンクを抽出",
+      "extractedTitle": "抽出したタイトルとリンク",
+      "extractedSubtitle": "全フレームのVision結果をまとめています。",
+      "resultsCount_one": "{{count}}件",
+      "resultsCount_other": "{{count}}件",
+      "resultLabel": "結果 {{index}}",
+      "copy": "結果をコピー",
+      "combinedTitle": "結合テキスト",
+      "combinedSubtitle": "全フレームからユニークな行を統合しました。",
+      "copyLabel": "コピー",
+      "downloadLabel": "ダウンロード",
+      "frameByFrame": "フレーム一覧"
+    },
+    "empty": {
+      "title": "音声なし動画をテキスト化",
+      "subtitle": "画面に文字がある短いクリップをアップロード。主要フレームを抽出し、検出テキストをまとめてすぐにコピーできます。",
+      "tagline": "🎯 チュートリアル、講義スライド、画面録画に最適"
+    },
+    "toast": {
+      "successTitle": "🎉 処理が完了しました",
+      "successMessage": "フレームを解析し、テキストを抽出しました。",
+      "errorTitle": "⚠️ 処理できませんでした",
+      "errorMessage": "より短いクリップで再試行してください。"
+    },
+    "frame": {
+      "words_one": "{{count}}語",
+      "words_other": "{{count}}語",
+      "noImage": "画像がありません"
+    }
+  }
+}

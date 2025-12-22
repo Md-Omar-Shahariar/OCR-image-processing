@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import TopNav from "./TopNav";
 
 interface BackgroundBlob {
   className: string;
@@ -32,7 +33,10 @@ export function AppShell({
         ></div>
       ))}
       {overlay && <div className="absolute inset-0">{overlay}</div>}
-      <div className="relative z-10">{children}</div>
+      <div className="relative z-10">
+        <TopNav />
+        {children}
+      </div>
     </main>
   );
 }

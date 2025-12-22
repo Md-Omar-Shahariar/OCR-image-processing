@@ -1,5 +1,8 @@
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { GetStaticPropsContext } from "next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "next-i18next";
 import { withAuth } from "../../components/withAuth";
 import AppShell from "../../components/layout/AppShell";
 import PageHeaderCard from "../../components/ui/PageHeaderCard";
@@ -11,14 +14,15 @@ import FrameCard from "../../components/video/FrameCard";
 import { FrameOcrResult, SearchResult } from "@/types/type";
 
 const SUPPORTED_LANGUAGES = [
-  { code: "eng", label: "English" },
-  { code: "jpn", label: "Japanese" },
-  { code: "chi", label: "Chinese" },
-  { code: "kor", label: "Korean" },
+  { code: "eng", labelKey: "language.english" },
+  { code: "jpn", labelKey: "language.japanese" },
+  { code: "chi", labelKey: "language.chinese" },
+  { code: "kor", labelKey: "language.korean" },
 ];
 
 function VisionVideoExtractor() {
   const router = useRouter();
+  const { t } = useTranslation("common");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [language, setLanguage] = useState("eng");
   const [frames, setFrames] = useState<FrameOcrResult[]>([]);
@@ -29,6 +33,15 @@ function VisionVideoExtractor() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const languageOptions = useMemo(
+    () =>
+      SUPPORTED_LANGUAGES.map((lang) => ({
+        ...lang,
+        label: t(lang.labelKey),
+      })),
+    [t]
+  );
 
   useEffect(() => {
     let progressInterval: NodeJS.Timeout;
@@ -162,6 +175,17 @@ function VisionVideoExtractor() {
   const hasResults =
     frames.length > 0 || aggregateText.length > 0 || aggregatedResults.length > 0;
 
+  const resultsSummary = t("videoVision.processed.summary", {
+    frames: frames.length,
+    frameSuffix: frames.length === 1 ? "" : "s",
+    links: aggregatedResults.length,
+    linkSuffix: aggregatedResults.length === 1 ? "" : "s",
+  });
+
+  const resultsCountText = t("videoVision.processed.resultsCount", {
+    count: aggregatedResults.length,
+  });
+
   const goHome = () => router.push("/");
 
   return (
@@ -170,11 +194,11 @@ function VisionVideoExtractor() {
         <div className="max-w-6xl mx-auto px-4 pt-8 pb-6">
           <PageHeaderCard
             onBack={goHome}
-            title="Video Frame Text Extractor"
-            subtitle="Upload a short video with on-screen text. We sample frames, run Google Vision OCR, and return the combined transcript."
+            title={t("videoVision.title")}
+            subtitle={t("videoVision.subtitle")}
             stats={[
-              { label: "Engine", value: "Google Vision" },
-              { label: "Frames", value: "Up to 12 / video" },
+              { label: t("videoVision.stats.engine"), value: t("videoVision.stats.engineValue") },
+              { label: t("videoVision.stats.frames"), value: t("videoVision.stats.framesValue") },
             ]}
           />
 
@@ -184,16 +208,16 @@ function VisionVideoExtractor() {
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
               <div className="relative z-10">
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-3 leading-tight">
-                  Extract Text from Silent Videos
+                  {t("videoVision.hero.title")}
                 </h1>
                 <p className="text-blue-50 text-base sm:text-lg max-w-3xl">
-                  Perfect for tutorials, screen recordings, and reels without voiceovers. We capture key frames and merge all on-screen text for you.
+                  {t("videoVision.hero.subtitle")}
                 </p>
                 <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                   {[
-                    { label: "Ideal length", value: "< 1 min, < 50MB" },
-                    { label: "Sampling", value: "1 fps · max 12 frames" },
-                    { label: "Output", value: "Per-frame + merged text" },
+                    { label: t("videoVision.hero.idealLabel"), value: t("videoVision.hero.idealValue") },
+                    { label: t("videoVision.hero.samplingLabel"), value: t("videoVision.hero.samplingValue") },
+                    { label: t("videoVision.hero.outputLabel"), value: t("videoVision.hero.outputValue") },
                   ].map((stat) => (
                     <div
                       key={stat.label}
@@ -217,41 +241,44 @@ function VisionVideoExtractor() {
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="mb-6">
                       <h2 className="text-2xl font-bold text-slate-800 mb-2">
-                        Upload your video
+                        {t("videoVision.form.heading")}
                       </h2>
                       <p className="text-slate-600">
-                        We strip audio, sample clear frames, and run Vision OCR on each frame. Best for videos with prominent text overlays.
+                        {t("videoVision.form.description")}
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                       <label className="flex flex-col space-y-2 bg-slate-50 border border-slate-200 rounded-2xl p-4">
                         <span className="text-sm font-semibold text-slate-700">
-                          Language hint
+                          {t("videoVision.form.languageLabel")}
                         </span>
                         <select
                           value={language}
                           onChange={(event) => setLanguage(event.target.value)}
                           className="border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-200"
                         >
-                          {SUPPORTED_LANGUAGES.map((lang) => (
-                            <option key={lang.code} value={lang.code}>
-                              {lang.label}
-                            </option>
-                          ))}
+                          {languageOptions.map((lang) => {
+                            const label = lang.label || lang.labelKey;
+                            return (
+                              <option key={lang.code} value={lang.code}>
+                                {label}
+                              </option>
+                            );
+                          })}
                         </select>
                         <span className="text-xs text-slate-500">
-                          Helps Vision prioritize the right character set.
+                          {t("videoVision.form.languageHelp")}
                         </span>
                       </label>
                       <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
                         <div className="text-sm font-semibold text-slate-700 mb-1">
-                          Sampling rules
+                          {t("videoVision.form.samplingRules")}
                         </div>
                         <ul className="text-sm text-slate-600 space-y-1">
-                          <li>• 1 frame per second</li>
-                          <li>• Up to 12 frames per upload</li>
-                          <li>• Frames resized to 1280px wide</li>
+                          <li>• {t("videoVision.form.ruleOne")}</li>
+                          <li>• {t("videoVision.form.ruleTwo")}</li>
+                          <li>• {t("videoVision.form.ruleThree")}</li>
                         </ul>
                       </div>
                     </div>
@@ -259,14 +286,14 @@ function VisionVideoExtractor() {
                     <UploadDropzone
                       files={videoFile ? [videoFile] : []}
                       processing={processing}
-                      helperText="Optimized for MP4/MOV • Under 50MB"
-                      maxSizeCopy="We only read video frames—no audio"
+                      helperText={t("videoVision.form.helperText")}
+                      maxSizeCopy={t("videoVision.form.maxSizeCopy")}
                       onFilesChange={onFilesChange}
                       onClearWorkspace={resetWorkspace}
                       isClearDisabled={!videoFile && !hasResults}
                       accept="video/*"
-                      browseLabel="Choose video"
-                      clearLabel="Reset"
+                      browseLabel={t("videoVision.form.browseLabel")}
+                      clearLabel={t("videoVision.form.clearLabel")}
                       accentGradient="from-emerald-500 to-sky-500"
                       idleClasses="border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50"
                       activeClasses="border-emerald-500 bg-emerald-50 scale-105"
@@ -291,7 +318,7 @@ function VisionVideoExtractor() {
                       {processing ? (
                         <>
                           <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Extracting text...</span>
+                          <span>{t("videoVision.form.processing")}</span>
                         </>
                       ) : (
                         <>
@@ -308,7 +335,7 @@ function VisionVideoExtractor() {
                               d="M13 10V3L4 14h7v7l9-11h-7z"
                             />
                           </svg>
-                          <span>Process video</span>
+                          <span>{t("videoVision.form.cta")}</span>
                         </>
                       )}
                     </button>
@@ -339,20 +366,20 @@ function VisionVideoExtractor() {
                           d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      <span>Best results</span>
+                      <span>{t("videoVision.best.title")}</span>
                     </h4>
                     <ul className="space-y-2 text-sm text-emerald-800">
                       <li className="flex items-center space-x-2">
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                        <span>Use crisp screen recordings with readable text.</span>
+                        <span>{t("videoVision.best.tip1")}</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                        <span>Keep clips short; we only sample the first 12 frames.</span>
+                        <span>{t("videoVision.best.tip2")}</span>
                       </li>
                       <li className="flex items-center space-x-2">
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                        <span>High-contrast text overlays work best.</span>
+                        <span>{t("videoVision.best.tip3")}</span>
                       </li>
                     </ul>
                   </div>
@@ -366,13 +393,10 @@ function VisionVideoExtractor() {
               <div className="bg-gradient-to-r from-emerald-600 to-blue-600 p-4 sm:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
-                    <span>🎉 Video processed</span>
+                    <span>🎉 {t("videoVision.processed.title")}</span>
                   </h2>
                   <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 text-center">
-                    <span className="text-white font-semibold">
-                      {frames.length} frame{frames.length === 1 ? "" : "s"} analyzed ·{" "}
-                      {aggregatedResults.length} link{aggregatedResults.length === 1 ? "" : "s"} found
-                    </span>
+                    <span className="text-white font-semibold">{resultsSummary}</span>
                   </div>
                 </div>
               </div>
@@ -383,14 +407,14 @@ function VisionVideoExtractor() {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                       <div>
                         <h3 className="text-xl font-bold text-slate-800">
-                          Extracted titles & links
+                          {t("videoVision.processed.extractedTitle")}
                         </h3>
                         <p className="text-sm text-slate-600">
-                          Combined Vision title extraction across all frames.
+                          {t("videoVision.processed.extractedSubtitle")}
                         </p>
                       </div>
                       <div className="text-sm font-semibold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-                        {aggregatedResults.length} result{aggregatedResults.length === 1 ? "" : "s"}
+                        {resultsCountText}
                       </div>
                     </div>
                     <div className="grid gap-4">
@@ -402,7 +426,7 @@ function VisionVideoExtractor() {
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="text-xs font-semibold text-slate-500 mb-1">
-                                Result {index + 1}
+                                {t("videoVision.processed.resultLabel", { index: index + 1 })}
                               </div>
                               <div className="text-slate-800 font-semibold text-lg">
                                 {result.title}
@@ -441,7 +465,7 @@ function VisionVideoExtractor() {
                                 )
                               }
                               className="text-slate-400 hover:text-emerald-600 transition-colors p-2"
-                              title="Copy result"
+                              title={t("videoVision.processed.copy")}
                             >
                               <svg
                                 className="w-4 h-4"
@@ -469,10 +493,10 @@ function VisionVideoExtractor() {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                       <div>
                         <h3 className="text-xl font-bold text-slate-800">
-                          Combined transcript
+                          {t("videoVision.processed.combinedTitle")}
                         </h3>
                         <p className="text-sm text-slate-600">
-                          Unique lines merged across all sampled frames.
+                          {t("videoVision.processed.combinedSubtitle")}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -493,7 +517,7 @@ function VisionVideoExtractor() {
                               d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                             />
                           </svg>
-                          <span>Copy</span>
+                          <span>{t("videoVision.processed.copyLabel")}</span>
                         </button>
                         <button
                           onClick={() =>
@@ -517,7 +541,7 @@ function VisionVideoExtractor() {
                               d="M12 5v14m0 0l-4-4m4 4l4-4"
                             />
                           </svg>
-                          <span>Download</span>
+                          <span>{t("videoVision.processed.downloadLabel")}</span>
                         </button>
                       </div>
                     </div>
@@ -530,7 +554,7 @@ function VisionVideoExtractor() {
                 {frames.length > 0 && (
                   <div className="space-y-4">
                     <h3 className="text-xl font-bold text-slate-800">
-                      Frame by frame
+                      {t("videoVision.processed.frameByFrame")}
                     </h3>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {frames.map((frame) => (
@@ -562,14 +586,14 @@ function VisionVideoExtractor() {
                 </svg>
               </div>
               <h3 className="text-2xl font-bold text-slate-800 mb-3">
-                Turn silent videos into text
+                {t("videoVision.empty.title")}
               </h3>
               <p className="text-slate-600 text-lg mb-6 max-w-2xl mx-auto">
-                Upload a short clip with on-screen words. We capture key frames and merge the detected text so you can copy or download it instantly.
+                {t("videoVision.empty.subtitle")}
               </p>
               <div className="inline-flex items-center space-x-2 bg-slate-100 rounded-full px-4 py-2">
                 <span className="text-slate-600 text-sm">
-                  🎯 Great for tutorials, course slides, and screen recordings
+                  {t("videoVision.empty.tagline")}
                 </span>
               </div>
             </div>
@@ -579,21 +603,29 @@ function VisionVideoExtractor() {
 
       {showSuccess && (
         <Toast
-          title="🎉 Video processed!"
-          message="Frames analyzed and text extracted."
+          title={t("videoVision.toast.successTitle")}
+          message={t("videoVision.toast.successMessage")}
           gradientClass="from-emerald-500 to-sky-500"
         />
       )}
 
       {showError && (
         <Toast
-          title="⚠️ Could not process video"
-          message={errorMessage || "Please retry with a shorter clip."}
+          title={t("videoVision.toast.errorTitle")}
+          message={errorMessage || t("videoVision.toast.errorMessage")}
           gradientClass="from-red-500 to-pink-500"
         />
       )}
     </AppShell>
   );
+}
+
+export async function getStaticProps({ locale }: GetStaticPropsContext) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? "en", ["common"])),
+    },
+  };
 }
 
 export default withAuth(VisionVideoExtractor);
