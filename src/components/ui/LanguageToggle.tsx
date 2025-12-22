@@ -5,7 +5,9 @@ import { useTranslation } from "next-i18next";
 function LanguageToggle() {
   const router = useRouter();
   const { i18n, t } = useTranslation("common");
-  const activeLocale = i18n.resolvedLanguage || i18n.language;
+  const resolvedLanguage = i18n.resolvedLanguage || i18n.language;
+  const routerLocale = router.locale;
+  const activeLocale = (routerLocale || resolvedLanguage || "en").split("-")[0];
   const labelLanguageMode = t("nav.languageMode", { defaultValue: "Language mode" });
   const labelEnglishShort = t("nav.englishShort", { defaultValue: "EN" });
   const labelJapaneseShort = t("nav.japaneseShort", { defaultValue: "JA" });
