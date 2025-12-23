@@ -29,13 +29,13 @@ export function FeatureCard({
   return (
     <button
       type="button"
-      className="group cursor-pointer text-left"
+      className="group cursor-pointer text-left h-full w-full"
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       <div
-        className={`relative bg-white rounded-3xl shadow-xl border border-white/50 backdrop-blur-sm overflow-hidden transition-all duration-500 w-full hover:shadow-2xl hover:scale-105 focus:outline-none ${
+        className={`relative bg-white rounded-3xl shadow-xl border border-white/50 backdrop-blur-sm overflow-hidden transition-all duration-500 w-full h-full hover:shadow-2xl hover:scale-105 focus:outline-none ${
           isHovered ? "ring-2 ring-offset-2 ring-blue-200" : ""
         }`}
       >

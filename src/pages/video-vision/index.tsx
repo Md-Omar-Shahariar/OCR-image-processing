@@ -33,6 +33,7 @@ function VisionVideoExtractor() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [activeFrame, setActiveFrame] = useState<FrameOcrResult | null>(null);
 
   const languageOptions = useMemo(
     () =>
@@ -187,6 +188,7 @@ function VisionVideoExtractor() {
   });
 
   const goHome = () => router.push("/");
+  const closeActiveFrame = () => setActiveFrame(null);
 
   return (
     <AppShell gradient="bg-gradient-to-br from-slate-50 via-sky-50 to-emerald-50">
@@ -558,7 +560,11 @@ function VisionVideoExtractor() {
                     </h3>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {frames.map((frame) => (
-                        <FrameCard key={frame.index} frame={frame} />
+                        <FrameCard
+                          key={frame.index}
+                          frame={frame}
+                          onSelect={setActiveFrame}
+                        />
                       ))}
                     </div>
                   </div>
@@ -615,6 +621,93 @@ function VisionVideoExtractor() {
           message={errorMessage || t("videoVision.toast.errorMessage")}
           gradientClass="from-red-500 to-pink-500"
         />
+      )}
+
+      {activeFrame && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 sm:px-8">
+          <div
+            className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
+            onClick={closeActiveFrame}
+          ></div>
+          <div className="relative w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <div className="flex flex-col lg:flex-row">
+              <div className="lg:w-2/3 bg-slate-900 relative">
+                {activeFrame.imageDataUrl ? (
+                  <img
+                    src={activeFrame.imageDataUrl}
+                    alt={`Frame ${activeFrame.index}`}
+                    className="w-full h-full object-contain bg-black"
+                  />
+                ) : (
+                  <div className="w-full h-full min-h-[320px] flex items-center justify-center text-slate-400">
+                    {t("videoVision.frame.noImage")}
+                  </div>
+                )}
+                <button
+                  onClick={closeActiveFrame}
+                  className="absolute top-3 right-3 bg-white/90 text-slate-700 rounded-full p-2 shadow hover:bg-white"
+                  aria-label="Close"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div className="lg:w-1/3 p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 border border-emerald-100 text-emerald-700 text-xs font-semibold">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Frame #{activeFrame.index}</span>
+                  </div>
+                  <div className="text-xs font-semibold text-slate-500">
+                    {t("videoVision.frame.words", {
+                      count: (activeFrame.text || "").split(/\s+/).filter(Boolean).length,
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">
+                    OCR Text
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 max-h-64 overflow-auto whitespace-pre-wrap">
+                    {activeFrame.text?.trim() || t("videoVision.frame.noImage")}
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={closeActiveFrame}
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-900 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-slate-800"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                    <span>Close</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </AppShell>
   );
