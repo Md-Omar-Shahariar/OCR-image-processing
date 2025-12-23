@@ -5,7 +5,9 @@ OCR Vision Suite is an internal-friendly toolkit built with Next.js 15 that turn
 - **Full Page OCR** – batch extract text from documents/PDFs with a CopyFish (OCR.Space) or Google Vision toggle.
 - **Title & Link Extractor** – pull titles, URLs, and snippets from search result screenshots using either CopyFish or Google Vision.
 - **Google Vision Extractor** – a dedicated Vision workspace for multilingual SERP screenshots when OCR.Space struggles.
+- **Video Frame OCR** – sample frames from short videos, run Vision OCR, and browse the results in a gallery+modal viewer.
 - **Red Box Scanner** – detect red-highlighted regions via OpenCV and read the enclosed text with Tesseract.js.
+- **Multilingual (EN/JA)** – UI copy is localized via next-i18next with a nav toggle; the default locale is Japanese.
 
 All tools share a cohesive, responsive UI, built-in drag-and-drop uploads, toasts, and guided states to make repeated OCR tasks fast and pleasant.
 
@@ -13,6 +15,7 @@ All tools share a cohesive, responsive UI, built-in drag-and-drop uploads, toast
 
 - Node.js 18+
 - npm (bundled with Node) or another supported package manager (yarn, pnpm, bun)
+- If you need i18n support locally, ensure `next-i18next`, `i18next`, and `react-i18next` are installed (already in package.json).
 
 ## Local Development
 
@@ -25,6 +28,7 @@ npm run dev
 ```
 
 Visit <http://localhost:3000>. The dashboard is gate-kept by `BasicAuth`, so set the expected credentials through environment variables if needed (see `.env.example` if available) before logging in.
+The default locale is Japanese; after login you will be redirected to `/ja`. Use the nav toggle to switch to English.
 
 ## Available Scripts
 
@@ -43,6 +47,7 @@ src/
 │  ├─ layout/AppShell.tsx         # Shared gradient shell + animated blobs
 │  ├─ ui/                         # PageHeaderCard, FeatureCard, ProgressBar, etc.
 │  ├─ upload/                     # Accessible drop zone + file list widgets
+│  ├─ video/FrameCard.tsx         # Video frame gallery card with modal trigger
 │  └─ feedback/Toast.tsx          # Reusable success/error toasts
 ├─ pages/
 │  ├─ index.tsx                   # Product-style dashboard linking each tool
@@ -50,8 +55,10 @@ src/
 │  ├─ vision-fullpage/index.tsx   # Google Vision full page OCR flow
 │  ├─ vision-extractor/index.tsx  # Google Vision-powered title/link workflow
 │  ├─ title-extractor/index.tsx   # OCR.Space title extractor (legacy)
+│  ├─ video-vision/index.tsx      # Video frame OCR workflow with gallery modal
 │  └─ redbox/index.tsx            # Red-box CV + OCR scanner
 ├─ pages/api/                     # Image-processing endpoints (OCR.Space, Vision, OpenCV)
+├─ public/locales/{en,ja}/        # Translation resources (common, home, videoVision)
 └─ styles/globals.css             # Global Tailwind + animation tokens
 ```
 
@@ -62,6 +69,13 @@ src/
 3. **Review & Export** – the UI renders structured cards per file with copy buttons, URL anchors, and fallback states when structured data is missing.
 
 Each extractor runs entirely within your session; no files are persisted after processing.
+
+## Internationalization (EN/JA)
+
+- Default locale: `ja`. The nav toggle switches between Japanese and English; BasicAuth redirects to `/ja` after login.
+- Translations live in `public/locales/{en,ja}/`. Namespaces in use: `common`, `home`, `videoVision`.
+- Pages using translations must export `getStaticProps` with `serverSideTranslations(locale, [...namespaces])`.
+- New UI strings should be added to both `en` and `ja` files to avoid fallback flicker.
 
 ## Google Vision Workflows
 

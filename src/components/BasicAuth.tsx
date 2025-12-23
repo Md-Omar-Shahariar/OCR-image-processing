@@ -18,6 +18,7 @@ export default function BasicAuth({ children }: BasicAuthProps) {
     checkAuth();
   }, []);
 
+  // Verifies session auth state on load.
   const checkAuth = () => {
     const authStatus = sessionStorage.getItem("Access");
     if (authStatus === "Authenticated") {
@@ -26,6 +27,7 @@ export default function BasicAuth({ children }: BasicAuthProps) {
     setIsChecking(false);
   };
 
+  // Handles username/password gate and redirects to JA locale after success.
   const handleLogin = (username: string, password: string) => {
     if (username === "knowledge" && password === "testPass123") {
       sessionStorage.setItem("Access", "Authenticated");

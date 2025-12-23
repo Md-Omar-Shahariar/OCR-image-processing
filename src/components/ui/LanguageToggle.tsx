@@ -13,6 +13,7 @@ function LanguageToggle() {
   const labelJapaneseShort = t("nav.japaneseShort", { defaultValue: "JA" });
   const labelLanguage = t("nav.language", { defaultValue: "Language" });
 
+  // Switches the app locale and routes to the current path with the new locale.
   const switchLanguage = useCallback(
     (locale: string) => {
       if (locale === i18n.language) return;

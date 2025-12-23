@@ -3,15 +3,21 @@ import { FrameOcrResult } from "@/types/type";
 
 interface FrameCardProps {
   frame: FrameOcrResult;
+  onSelect?: (frame: FrameOcrResult) => void;
 }
 
-function FrameCard({ frame }: FrameCardProps) {
+function FrameCard({ frame, onSelect }: FrameCardProps) {
   const { t } = useTranslation("common");
   const previewText = frame.text?.trim() || "";
   const wordCount = previewText.split(/\s+/).filter(Boolean).length;
 
+  // Displays a single frame thumbnail with count and triggers selection for modal view.
   return (
-    <div className="group relative overflow-hidden rounded-3xl border border-emerald-100/70 bg-white/90 backdrop-blur shadow-lg transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl">
+    <button
+      type="button"
+      onClick={() => onSelect?.(frame)}
+      className="group relative overflow-hidden rounded-3xl border border-emerald-100/70 bg-white/90 backdrop-blur shadow-lg transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-emerald-200 w-full text-left"
+    >
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/50 via-transparent to-sky-100/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
       <div className="flex items-center justify-between px-4 pt-4 text-xs font-semibold text-slate-600">
@@ -52,8 +58,7 @@ function FrameCard({ frame }: FrameCardProps) {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/0 to-transparent"></div>
         <div className="pointer-events-none absolute inset-0 opacity-60 mix-blend-soft-light bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.2),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.18),transparent_30%)]"></div>
       </div>
-
-    </div>
+    </button>
   );
 }
 
