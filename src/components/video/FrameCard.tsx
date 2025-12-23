@@ -11,6 +11,7 @@ function FrameCard({ frame, onSelect }: FrameCardProps) {
   const previewText = frame.text?.trim() || "";
   const wordCount = previewText.split(/\s+/).filter(Boolean).length;
 
+  // Displays a single frame thumbnail with count and triggers selection for modal view.
   return (
     <button
       type="button"

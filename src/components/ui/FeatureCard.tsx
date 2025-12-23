@@ -26,6 +26,7 @@ export function FeatureCard({
   onMouseEnter,
   onMouseLeave,
 }: FeatureCardProps) {
+  // Renders a clickable feature tile that shows an icon, summary copy, and capability list.
   return (
     <button
       type="button"

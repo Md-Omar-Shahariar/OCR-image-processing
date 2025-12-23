@@ -44,6 +44,7 @@ export function UploadDropzone({
     ? "🎥 Drop videos here or click to browse"
     : "✨ Drop images here or click to browse";
 
+  // Applies accept rules and bubbles valid files to parent.
   const updateFiles = (list: FileList | File[]) => {
     const acceptRules = accept
       .split(",")
@@ -70,6 +71,7 @@ export function UploadDropzone({
     }
   };
 
+  // Drag/drop handlers.
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragging(false);
@@ -93,6 +95,7 @@ export function UploadDropzone({
 
   const triggerFileInput = () => inputRef.current?.click();
 
+  // Support keyboard activation for accessibility.
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
