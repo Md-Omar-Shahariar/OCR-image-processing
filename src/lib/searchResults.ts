@@ -49,7 +49,8 @@ export function extractSearchResults(text: string): SearchResult[] {
       isUrlLine = urlIndex === 0 || (urlIndex === 1 && tokenIsMarker);
 
       if (isUrlLine) {
-        const url = urlMatch[0];
+        // Clean URLs that are truncated with ellipses from OCR.
+        const url = urlMatch[0].replace(/[.…]+$/g, "");
 
         let title = "";
         let description = "";
