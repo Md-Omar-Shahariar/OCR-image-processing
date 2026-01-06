@@ -82,7 +82,9 @@ export default async function handler(
     for (const frame of frames) {
       const rawText = await runVisionOCR(frame, language, "TEXT_DETECTION");
       const text = cleanText(rawText);
-      const searchResults = extractSearchResults(text);
+      const searchResults = extractSearchResults(text).filter(
+        (result) => !!result.description?.trim()
+      );
       const imageDataUrl = `data:image/jpeg;base64,${frame.toString("base64")}`;
 
       aggregatedResults = mergeResults(aggregatedResults, searchResults);
