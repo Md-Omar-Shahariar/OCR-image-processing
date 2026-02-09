@@ -1,3 +1,4 @@
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 import { createWorker } from "tesseract.js";
@@ -773,10 +774,13 @@ function RedBoxScanner() {
                   {originalImage && (
                     <div className="relative bg-slate-50 rounded-2xl p-4 border border-slate-200">
                       <div className="relative overflow-hidden rounded-lg">
-                        <img
+                        <NextImage
                           src={originalImage}
                           alt="Original"
+                          width={1200}
+                          height={800}
                           className="w-full h-auto rounded-lg shadow-sm"
+                          unoptimized
                         />
                         <canvas
                           ref={canvasRef}

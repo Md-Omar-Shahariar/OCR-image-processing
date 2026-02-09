@@ -12,19 +12,19 @@ export function withAuth<P extends object>(
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
-      checkAuthentication();
-    }, []);
+      const checkAuthentication = () => {
+        const authStatus = sessionStorage.getItem("Access");
+        if (authStatus === "Authenticated") {
+          setIsAuthenticated(true);
+        } else {
+          // Redirect to home if not authenticated
+          router.push("/");
+        }
+        setIsChecking(false);
+      };
 
-    const checkAuthentication = () => {
-      const authStatus = sessionStorage.getItem("Access");
-      if (authStatus === "Authenticated") {
-        setIsAuthenticated(true);
-      } else {
-        // Redirect to home if not authenticated
-        router.push("/");
-      }
-      setIsChecking(false);
-    };
+      checkAuthentication();
+    }, [router]);
 
     if (isChecking) {
       return (
