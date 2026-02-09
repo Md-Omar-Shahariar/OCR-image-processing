@@ -103,7 +103,7 @@ async function parseFormData(req: NextApiRequest): Promise<ProcessedFile> {
           fileBuffer = Buffer.concat(chunks);
         });
 
-        file.on("error", (error: Error) => {
+        file.on("error", () => {
           reject(new Error("Error reading uploaded file"));
         });
       }
@@ -113,7 +113,7 @@ async function parseFormData(req: NextApiRequest): Promise<ProcessedFile> {
       resolve({ fields, fileBuffer });
     });
 
-    busboy.on("error", (error: Error) => {
+    busboy.on("error", () => {
       reject(new Error("Error processing form data"));
     });
 

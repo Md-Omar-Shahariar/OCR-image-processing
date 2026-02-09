@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { useRouter } from "next/router";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { GetStaticPropsContext } from "next";
@@ -633,10 +634,13 @@ function VisionVideoExtractor() {
             <div className="flex flex-col lg:flex-row">
               <div className="lg:w-2/3 bg-slate-900 relative">
                 {activeFrame.imageDataUrl ? (
-                  <img
+                  <Image
                     src={activeFrame.imageDataUrl}
                     alt={`Frame ${activeFrame.index}`}
-                    className="w-full h-full object-contain bg-black"
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 66vw"
+                    className="object-contain bg-black"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full min-h-[320px] flex items-center justify-center text-slate-400">

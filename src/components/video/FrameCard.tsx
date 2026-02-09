@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { useTranslation } from "next-i18next";
 import { FrameOcrResult } from "@/types/type";
 
@@ -45,10 +46,13 @@ function FrameCard({ frame, onSelect }: FrameCardProps) {
 
       <div className="relative mx-4 mt-3 overflow-hidden rounded-2xl border border-white/60 bg-slate-100 aspect-video">
         {frame.imageDataUrl ? (
-          <img
+          <Image
             src={frame.imageDataUrl}
             alt={`Frame ${frame.index}`}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover transition-transform duration-700 group-hover:scale-105"
+            unoptimized
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm text-slate-500">
