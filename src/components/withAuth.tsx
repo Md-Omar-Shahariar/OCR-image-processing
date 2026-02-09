@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
 export function withAuth<P extends object>(
-  WrappedComponent: React.ComponentType<P>
+  WrappedComponent: React.ComponentType<P>,
 ) {
   return function AuthenticatedComponent(props: P) {
     const router = useRouter();
@@ -12,19 +12,19 @@ export function withAuth<P extends object>(
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
-      const checkAuthentication = () => {
-        const authStatus = sessionStorage.getItem("Access");
-        if (authStatus === "Authenticated") {
-          setIsAuthenticated(true);
-        } else {
-          // Redirect to home if not authenticated
-          router.push("/");
-        }
-        setIsChecking(false);
-      };
-
       checkAuthentication();
-    }, [router]);
+    }, []);
+
+    const checkAuthentication = () => {
+      const authStatus = sessionStorage.getItem("Access");
+      if (authStatus === "Authenticated") {
+        setIsAuthenticated(true);
+      } else {
+        // Redirect to home if not authenticated
+        router.push("/");
+      }
+      setIsChecking(false);
+    };
 
     if (isChecking) {
       return (

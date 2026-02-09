@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { useRouter } from "next/router";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { GetStaticPropsContext } from "next";
@@ -28,7 +27,9 @@ function VisionVideoExtractor() {
   const [language, setLanguage] = useState("eng");
   const [frames, setFrames] = useState<FrameOcrResult[]>([]);
   const [aggregateText, setAggregateText] = useState("");
-  const [aggregatedResults, setAggregatedResults] = useState<SearchResult[]>([]);
+  const [aggregatedResults, setAggregatedResults] = useState<SearchResult[]>(
+    [],
+  );
   const [processing, setProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -42,7 +43,7 @@ function VisionVideoExtractor() {
         ...lang,
         label: t(lang.labelKey),
       })),
-    [t]
+    [t],
   );
 
   useEffect(() => {
@@ -159,7 +160,7 @@ function VisionVideoExtractor() {
         setTimeout(() => setShowSuccess(false), 2500);
       } else {
         setErrorMessage(
-          data.message || "Video could not be processed. Please try again."
+          data.message || "Video could not be processed. Please try again.",
         );
         setShowError(true);
         setTimeout(() => setShowError(false), 2500);
@@ -175,7 +176,9 @@ function VisionVideoExtractor() {
   };
 
   const hasResults =
-    frames.length > 0 || aggregateText.length > 0 || aggregatedResults.length > 0;
+    frames.length > 0 ||
+    aggregateText.length > 0 ||
+    aggregatedResults.length > 0;
 
   const resultsSummary = t("videoVision.processed.summary", {
     frames: frames.length,
@@ -200,8 +203,14 @@ function VisionVideoExtractor() {
             title={t("videoVision.title")}
             subtitle={t("videoVision.subtitle")}
             stats={[
-              { label: t("videoVision.stats.engine"), value: t("videoVision.stats.engineValue") },
-              { label: t("videoVision.stats.frames"), value: t("videoVision.stats.framesValue") },
+              {
+                label: t("videoVision.stats.engine"),
+                value: t("videoVision.stats.engineValue"),
+              },
+              {
+                label: t("videoVision.stats.frames"),
+                value: t("videoVision.stats.framesValue"),
+              },
             ]}
           />
 
@@ -218,9 +227,18 @@ function VisionVideoExtractor() {
                 </p>
                 <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                   {[
-                    { label: t("videoVision.hero.idealLabel"), value: t("videoVision.hero.idealValue") },
-                    { label: t("videoVision.hero.samplingLabel"), value: t("videoVision.hero.samplingValue") },
-                    { label: t("videoVision.hero.outputLabel"), value: t("videoVision.hero.outputValue") },
+                    {
+                      label: t("videoVision.hero.idealLabel"),
+                      value: t("videoVision.hero.idealValue"),
+                    },
+                    {
+                      label: t("videoVision.hero.samplingLabel"),
+                      value: t("videoVision.hero.samplingValue"),
+                    },
+                    {
+                      label: t("videoVision.hero.outputLabel"),
+                      value: t("videoVision.hero.outputValue"),
+                    },
                   ].map((stat) => (
                     <div
                       key={stat.label}
@@ -399,7 +417,9 @@ function VisionVideoExtractor() {
                     <span>🎉 {t("videoVision.processed.title")}</span>
                   </h2>
                   <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 text-center">
-                    <span className="text-white font-semibold">{resultsSummary}</span>
+                    <span className="text-white font-semibold">
+                      {resultsSummary}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -429,13 +449,17 @@ function VisionVideoExtractor() {
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="text-xs font-semibold text-slate-500 mb-1">
-                                {t("videoVision.processed.resultLabel", { index: index + 1 })}
+                                {t("videoVision.processed.resultLabel", {
+                                  index: index + 1,
+                                })}
                               </div>
                               <div className="text-slate-800 font-semibold text-lg">
                                 {result.title}
                               </div>
                               {result.description && (
-                                <p className="text-sm text-slate-600 mt-2">{result.description}</p>
+                                <p className="text-sm text-slate-600 mt-2">
+                                  {result.description}
+                                </p>
                               )}
                               <a
                                 href={result.url}
@@ -463,8 +487,10 @@ function VisionVideoExtractor() {
                               onClick={() =>
                                 copyToClipboard(
                                   `${result.title}\n${result.url}${
-                                    result.description ? `\n${result.description}` : ""
-                                  }`
+                                    result.description
+                                      ? `\n${result.description}`
+                                      : ""
+                                  }`,
                                 )
                               }
                               className="text-slate-400 hover:text-emerald-600 transition-colors p-2"
@@ -526,7 +552,7 @@ function VisionVideoExtractor() {
                           onClick={() =>
                             downloadTextFile(
                               aggregateText,
-                              `${sanitizeFilename(videoFile?.name || "video")}_transcript.txt`
+                              `${sanitizeFilename(videoFile?.name || "video")}_transcript.txt`,
                             )
                           }
                           className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-semibold bg-emerald-100 hover:bg-emerald-200 text-emerald-700"
@@ -544,7 +570,9 @@ function VisionVideoExtractor() {
                               d="M12 5v14m0 0l-4-4m4 4l4-4"
                             />
                           </svg>
-                          <span>{t("videoVision.processed.downloadLabel")}</span>
+                          <span>
+                            {t("videoVision.processed.downloadLabel")}
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -570,7 +598,6 @@ function VisionVideoExtractor() {
                     </div>
                   </div>
                 )}
-
               </div>
             </div>
           )}
@@ -634,13 +661,10 @@ function VisionVideoExtractor() {
             <div className="flex flex-col lg:flex-row">
               <div className="lg:w-2/3 bg-slate-900 relative">
                 {activeFrame.imageDataUrl ? (
-                  <Image
+                  <img
                     src={activeFrame.imageDataUrl}
                     alt={`Frame ${activeFrame.index}`}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 66vw"
-                    className="object-contain bg-black"
-                    unoptimized
+                    className="w-full h-full object-contain bg-black"
                   />
                 ) : (
                   <div className="w-full h-full min-h-[320px] flex items-center justify-center text-slate-400">
@@ -675,7 +699,9 @@ function VisionVideoExtractor() {
                   </div>
                   <div className="text-xs font-semibold text-slate-500">
                     {t("videoVision.frame.words", {
-                      count: (activeFrame.text || "").split(/\s+/).filter(Boolean).length,
+                      count: (activeFrame.text || "")
+                        .split(/\s+/)
+                        .filter(Boolean).length,
                     })}
                   </div>
                 </div>
