@@ -25,7 +25,7 @@ interface ProcessedFile {
 async function processOCR(
   imageBuffer: Buffer,
   language: string,
-  engine: "1" | "2"
+  engine: "1" | "2",
 ): Promise<OcrSpaceResponse> {
   const base64Image = imageBuffer.toString("base64");
 
@@ -78,7 +78,7 @@ async function parseFormData(req: NextApiRequest): Promise<ProcessedFile> {
       (
         name: string,
         file: NodeJS.ReadableStream,
-        info: { mimeType: string }
+        info: { mimeType: string },
       ) => {
         const { mimeType } = info;
 
@@ -89,7 +89,7 @@ async function parseFormData(req: NextApiRequest): Promise<ProcessedFile> {
 
         if (!mimeType?.startsWith("image/")) {
           reject(
-            new Error("Please upload a valid image file (JPEG, PNG, etc.)")
+            new Error("Please upload a valid image file (JPEG, PNG, etc.)"),
           );
           return;
         }
@@ -103,17 +103,17 @@ async function parseFormData(req: NextApiRequest): Promise<ProcessedFile> {
           fileBuffer = Buffer.concat(chunks);
         });
 
-        file.on("error", () => {
+        file.on("error", (error: Error) => {
           reject(new Error("Error reading uploaded file"));
         });
-      }
+      },
     );
 
     busboy.on("finish", () => {
       resolve({ fields, fileBuffer });
     });
 
-    busboy.on("error", () => {
+    busboy.on("error", (error: Error) => {
       reject(new Error("Error processing form data"));
     });
 
@@ -123,7 +123,7 @@ async function parseFormData(req: NextApiRequest): Promise<ProcessedFile> {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
+  res: NextApiResponse<ApiResponse>,
 ) {
   // Set CORS headers for cross-origin requests
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -212,7 +212,7 @@ export default async function handler(
     const searchResults = extractSearchResults(cleanedText);
 
     console.log(
-      `Request completed successfully: ${searchResults.length} search results extracted`
+      `Request completed successfully: ${searchResults.length} search results extracted`,
     );
 
     // Return successful response

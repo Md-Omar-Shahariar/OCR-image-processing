@@ -1,4 +1,3 @@
-import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 import { createWorker } from "tesseract.js";
@@ -146,7 +145,7 @@ function RedBoxScanner() {
 
         await new Promise<void>((resolve, reject) => {
           const existingScript = document.querySelector(
-            'script[src*="opencv.js"]'
+            'script[src*="opencv.js"]',
           );
           if (existingScript) {
             const checkCV = () => {
@@ -199,7 +198,7 @@ function RedBoxScanner() {
   const detectRedBoxesWithCanvas = (
     ctx: CanvasRenderingContext2D,
     width: number,
-    height: number
+    height: number,
   ): Box[] => {
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
@@ -236,7 +235,7 @@ function RedBoxScanner() {
     data: Uint8ClampedArray,
     width: number,
     height: number,
-    visited: Set<string>
+    visited: Set<string>,
   ): Box => {
     const queue: [number, number][] = [[startX, startY]];
     let minX = startX,
@@ -280,13 +279,13 @@ function RedBoxScanner() {
   const createScalar = (
     h: number,
     s: number,
-    v: number
+    v: number,
   ): [number, number, number, number] => {
     return [h, s, v, 0];
   };
 
   const handleImage = async (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ): Promise<void> => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -349,25 +348,25 @@ function RedBoxScanner() {
             hsv.rows,
             hsv.cols,
             hsv.type(),
-            createScalar(0, 100, 100)
+            createScalar(0, 100, 100),
           );
           const highRed1 = new window.cv.Mat(
             hsv.rows,
             hsv.cols,
             hsv.type(),
-            createScalar(10, 255, 255)
+            createScalar(10, 255, 255),
           );
           const lowRed2 = new window.cv.Mat(
             hsv.rows,
             hsv.cols,
             hsv.type(),
-            createScalar(160, 100, 100)
+            createScalar(160, 100, 100),
           );
           const highRed2 = new window.cv.Mat(
             hsv.rows,
             hsv.cols,
             hsv.type(),
-            createScalar(180, 255, 255)
+            createScalar(180, 255, 255),
           );
 
           const mask1 = new window.cv.Mat();
@@ -380,19 +379,19 @@ function RedBoxScanner() {
 
           const kernel = window.cv.getStructuringElement(
             window.cv.MORPH_RECT,
-            new window.cv.Size(5, 5)
+            new window.cv.Size(5, 5),
           );
           window.cv.morphologyEx(
             redMask,
             redMask,
             window.cv.MORPH_CLOSE,
-            kernel
+            kernel,
           );
           window.cv.morphologyEx(
             redMask,
             redMask,
             window.cv.MORPH_OPEN,
-            kernel
+            kernel,
           );
 
           const contours = new window.cv.MatVector();
@@ -402,7 +401,7 @@ function RedBoxScanner() {
             contours,
             hierarchy,
             window.cv.RETR_EXTERNAL,
-            window.cv.CHAIN_APPROX_SIMPLE
+            window.cv.CHAIN_APPROX_SIMPLE,
           );
 
           for (let i = 0; i < contours.size(); i++) {
@@ -460,7 +459,7 @@ function RedBoxScanner() {
             0,
             0,
             rect.width,
-            rect.height
+            rect.height,
           );
 
           try {
@@ -492,7 +491,7 @@ function RedBoxScanner() {
       } catch (error) {
         console.error("Error processing image:", error);
         setStatus(
-          `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+          `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
         );
       } finally {
         setIsProcessing(false);
@@ -539,7 +538,9 @@ function RedBoxScanner() {
           {/* Main Card */}
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden mb-8">
             {/* Header Section */}
-            <div className={`${theme.headerGradient} p-8 relative overflow-hidden`}>
+            <div
+              className={`${theme.headerGradient} p-8 relative overflow-hidden`}
+            >
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
 
@@ -687,21 +688,29 @@ function RedBoxScanner() {
                     </h4>
                     <ul className={`space-y-2 text-sm ${theme.tipsText}`}>
                       <li className="flex items-center space-x-2">
-                        <div className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}
+                        ></div>
                         <span>Use clear images with distinct red boxes</span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}
+                        ></div>
                         <span>
                           Ensure good contrast between text and background
                         </span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}
+                        ></div>
                         <span>Red boxes should be clearly visible</span>
                       </li>
                       <li className="flex items-center space-x-2">
-                        <div className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}></div>
+                        <div
+                          className={`w-1.5 h-1.5 ${theme.tipsBullet} rounded-full`}
+                        ></div>
                         <span>Text inside boxes should be readable</span>
                       </li>
                     </ul>
@@ -774,13 +783,10 @@ function RedBoxScanner() {
                   {originalImage && (
                     <div className="relative bg-slate-50 rounded-2xl p-4 border border-slate-200">
                       <div className="relative overflow-hidden rounded-lg">
-                        <NextImage
+                        <img
                           src={originalImage}
                           alt="Original"
-                          width={1200}
-                          height={800}
                           className="w-full h-auto rounded-lg shadow-sm"
-                          unoptimized
                         />
                         <canvas
                           ref={canvasRef}
@@ -803,7 +809,9 @@ function RedBoxScanner() {
 
               {/* Text Results Panel */}
               <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
-                <div className={`bg-gradient-to-r from-green-600 to-emerald-600 p-6`}>
+                <div
+                  className={`bg-gradient-to-r from-green-600 to-emerald-600 p-6`}
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-bold text-white flex items-center space-x-3">
                       <span>📋 Extracted Text</span>
