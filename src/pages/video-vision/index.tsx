@@ -1,8 +1,9 @@
 import { useRouter } from "next/router";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { GetStaticPropsContext } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
+import type { FFmpeg } from "@ffmpeg/ffmpeg";
 import { withAuth } from "../../components/withAuth";
 import AppShell from "../../components/layout/AppShell";
 import PageHeaderCard from "../../components/ui/PageHeaderCard";
@@ -23,6 +24,9 @@ const SUPPORTED_LANGUAGES = [
 function VisionVideoExtractor() {
   const router = useRouter();
   const { t } = useTranslation("common");
+  const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // 4MB Vercel limit
+  const MAX_UPLOAD_LABEL = "4MB";
+  const ffmpegRef = useRef<FFmpeg | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [language, setLanguage] = useState("eng");
   const [frames, setFrames] = useState<FrameOcrResult[]>([]);
@@ -80,6 +84,80 @@ function VisionVideoExtractor() {
     setAggregateText("");
     setErrorMessage("");
     setAggregatedResults([]);
+  };
+
+  const ensureFfmpeg = async () => {
+    if (!ffmpegRef.current) {
+      const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+      ffmpegRef.current = new FFmpeg();
+    }
+
+    if (!ffmpegRef.current.loaded) {
+      const { toBlobURL } = await import("@ffmpeg/util");
+      const baseURL =
+        "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+      await ffmpegRef.current.load({
+        coreURL: await toBlobURL(
+          `${baseURL}/ffmpeg-core.js`,
+          "text/javascript",
+        ),
+        wasmURL: await toBlobURL(
+          `${baseURL}/ffmpeg-core.wasm`,
+          "application/wasm",
+        ),
+      });
+    }
+
+    return ffmpegRef.current;
+  };
+
+  const compressVideo = async (file: File) => {
+    const ffmpeg = await ensureFfmpeg();
+    const { fetchFile } = await import("@ffmpeg/util");
+    const inputExt = file.name.split(".").pop() || "mp4";
+    const inputName = `input.${inputExt}`;
+    const outputName = "output.mp4";
+
+    await ffmpeg.writeFile(inputName, await fetchFile(file));
+
+    await ffmpeg.exec([
+      "-i",
+      inputName,
+      "-vf",
+      "fps=15,scale='min(1280,iw)':-2",
+      "-c:v",
+      "libx264",
+      "-b:v",
+      "1200k",
+      "-maxrate",
+      "1200k",
+      "-bufsize",
+      "2400k",
+      "-preset",
+      "veryfast",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "96k",
+      "-movflags",
+      "+faststart",
+      outputName,
+    ]);
+
+    const data = await ffmpeg.readFile(outputName);
+    await ffmpeg.deleteFile(inputName);
+    await ffmpeg.deleteFile(outputName);
+
+    const outputBlob = new Blob(
+      [typeof data === "string" ? data : new Uint8Array(data)],
+      { type: "video/mp4" },
+    );
+    const outputNameClean = file.name.replace(/\.[^/.]+$/, "");
+    return new File([outputBlob], `${outputNameClean}_compressed.mp4`, {
+      type: "video/mp4",
+    });
   };
 
   const removeFile = () => {
@@ -142,7 +220,30 @@ function VisionVideoExtractor() {
     setErrorMessage("");
 
     const formData = new FormData();
-    formData.append("file", videoFile);
+    let uploadFile = videoFile;
+
+    try {
+      uploadFile = await compressVideo(videoFile);
+    } catch (compressionError) {
+      console.error(compressionError);
+      setErrorMessage("Video compression failed. Please try a smaller video.");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 2500);
+      setProcessing(false);
+      return;
+    }
+
+    if (uploadFile.size > MAX_UPLOAD_BYTES) {
+      setErrorMessage(
+        `Compressed video is still over ${MAX_UPLOAD_LABEL}. Try a shorter clip.`,
+      );
+      setShowError(true);
+      setTimeout(() => setShowError(false), 2500);
+      setProcessing(false);
+      return;
+    }
+
+    formData.append("file", uploadFile);
     formData.append("language", language);
 
     try {
@@ -315,7 +416,7 @@ function VisionVideoExtractor() {
                       files={videoFile ? [videoFile] : []}
                       processing={processing}
                       helperText={t("videoVision.form.helperText")}
-                      maxSizeCopy={t("videoVision.form.maxSizeCopy")}
+                      maxSizeCopy={`Videos will be compressed to ~${MAX_UPLOAD_LABEL} before upload`}
                       onFilesChange={onFilesChange}
                       onClearWorkspace={resetWorkspace}
                       isClearDisabled={!videoFile && !hasResults}
