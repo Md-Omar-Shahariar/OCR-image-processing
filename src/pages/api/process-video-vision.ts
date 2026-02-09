@@ -75,6 +75,11 @@ export default async function handler(
       MAX_VIDEO_FRAMES,
       mimeType
     );
+    console.log(
+      `Extracted ${frames.length} frames. Sizes (bytes): ${frames
+        .map((frame) => frame.length)
+        .join(", ")}`
+    );
 
     const frameResults: FrameOcrResult[] = [];
     let aggregatedResults: SearchResult[] = [];

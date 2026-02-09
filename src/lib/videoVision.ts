@@ -103,10 +103,18 @@ export async function parseVisionVideoFormData(
   });
 }
 
+const MAX_FRAME_SIZE = 10 * 1024 * 1024; // 10MB
+
+interface FfmpegOptions {
+  scaleWidth: number;
+  quality: number;
+}
+
 async function runFfmpeg(
   inputPath: string,
   framePattern: string,
   maxFrames: number,
+  options: FfmpegOptions,
   forceFirstFrame = false
 ) {
   if (!ffmpegPath) {
@@ -115,7 +123,9 @@ async function runFfmpeg(
     );
   }
 
-  const filter = forceFirstFrame ? "select=eq(n\\,0),scale=1280:-1" : "fps=1,scale=1280:-1";
+  const filter = forceFirstFrame
+    ? `select=eq(n\\,0),scale=${options.scaleWidth}:-1`
+    : `fps=1,scale=${options.scaleWidth}:-1`;
 
   const args = [
     "-y",
@@ -124,7 +134,7 @@ async function runFfmpeg(
     "-vf",
     filter,
     "-q:v",
-    "3",
+    String(options.quality),
     "-vframes",
     String(maxFrames),
     framePattern,
@@ -177,31 +187,48 @@ export async function extractFramesFromVideo(
   const ext = inferExtension(mimeType) || ".mp4";
   const inputPath = path.join(tempDir, `input-video${ext}`);
   const framePattern = path.join(tempDir, "frame-%03d.jpg");
+  const presets: FfmpegOptions[] = [
+    { scaleWidth: 1280, quality: 3 },
+    { scaleWidth: 1024, quality: 4 },
+    { scaleWidth: 800, quality: 5 },
+    { scaleWidth: 640, quality: 6 },
+  ];
 
   try {
     await fs.writeFile(inputPath, videoBuffer);
-    await runFfmpeg(inputPath, framePattern, maxFrames);
+    for (const preset of presets) {
+      await runFfmpeg(inputPath, framePattern, maxFrames, preset);
 
-    let files = (await fs.readdir(tempDir))
-      .filter((file) => file.startsWith("frame-") && file.endsWith(".jpg"))
-      .sort();
-
-    if (files.length === 0) {
-      await runFfmpeg(inputPath, framePattern, 1, true);
-      files = (await fs.readdir(tempDir))
+      let files = (await fs.readdir(tempDir))
         .filter((file) => file.startsWith("frame-") && file.endsWith(".jpg"))
         .sort();
+
+      if (files.length === 0) {
+        await runFfmpeg(inputPath, framePattern, 1, preset, true);
+        files = (await fs.readdir(tempDir))
+          .filter((file) => file.startsWith("frame-") && file.endsWith(".jpg"))
+          .sort();
+      }
+
+      const frames = await Promise.all(
+        files.map((file) => fs.readFile(path.join(tempDir, file)))
+      );
+
+      if (frames.length === 0) {
+        continue;
+      }
+
+      const maxFrameSize = Math.max(...frames.map((frame) => frame.length));
+      if (maxFrameSize <= MAX_FRAME_SIZE) {
+        return frames;
+      }
+
+      await Promise.all(
+        files.map((file) => fs.rm(path.join(tempDir, file), { force: true }))
+      );
     }
 
-    const frames = await Promise.all(
-      files.map((file) => fs.readFile(path.join(tempDir, file)))
-    );
-
-    if (frames.length === 0) {
-      throw new Error("No frames were extracted from the uploaded video.");
-    }
-
-    return frames;
+    throw new Error("Extracted frames exceed the 10MB limit. Use a smaller video.");
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
