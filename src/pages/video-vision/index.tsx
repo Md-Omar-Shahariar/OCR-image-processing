@@ -150,18 +150,25 @@ function VisionVideoExtractor() {
         method: "POST",
         body: formData,
       });
-      const data = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+      const responseText = await response.text();
+      const data =
+        contentType.includes("application/json") && responseText
+          ? JSON.parse(responseText)
+          : null;
 
-      if (response.ok && data.status === "success") {
+      if (response.ok && data?.status === "success") {
         setFrames(data.frames || []);
         setAggregateText(data.aggregateText || "");
         setAggregatedResults(data.searchResults || []);
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 2500);
       } else {
-        setErrorMessage(
-          data.message || "Video could not be processed. Please try again.",
-        );
+        const fallbackMessage =
+          response.status === 413
+            ? "Upload is too large. Please upload a smaller video."
+            : "Video could not be processed. Please try again.";
+        setErrorMessage(data?.message || fallbackMessage);
         setShowError(true);
         setTimeout(() => setShowError(false), 2500);
       }
